@@ -75,3 +75,13 @@ Main file: clean_cohort (Ensures all recruited participants are present).
 Merge 1: Joined clean_icd to add baseline health status.
 
 Merge 2: Joined clean_res to add the 10-year cumulative exposure weights.
+
+# Validation of the merged dataset
+From the merged dataset, we evaluate the data quality based on the seven data quality indicators: 
+- Analyzable: Data frame is analyzable with unique identifiers (ID), variable names in the first row and explicit values. 
+- Interpretable: All the variable names are standardized and explicit. 
+- Complete: There are no data duplications. However, there are missing data in the age (NA - due to one outlier) and weighted_exp indicating missing data for the residential dataset within the 10 year window cap. 
+- Valid and consistent: The values for each variable are appropriate (noted that the outlier age value of 345 was transformed to NA). No other data format inconsistencies identified. 
+- Accurate: Variables reflect the transformation (aggregation and calculation) indicated above. 
+- De-identified: Data regarding direct identifiers such as names are removed. Unique ID is the sole identifier of the dataset. 
+

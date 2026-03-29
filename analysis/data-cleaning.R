@@ -160,5 +160,7 @@ cohort_data_final <- clean_cohort %>%
   
 export(cohort_data_final, here("data", "cohort_data_final.csv"))
   
-
-  
+# Validation of merged dataset
+summary(cohort_data_final)
+str(cohort_data_final)
+skimr::skim(cohort_data_final)
