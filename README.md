@@ -1,5 +1,5 @@
 # Project Overview
-This repository contains the complete research pipeline for evaluating the longitudinal association between 10-year cumulative air pollution exposure (AQI) and the risk of new-onset Chronic Obstructive Pulmonary Disease (COPD) in U.S. adults.
+This repository includes the data and data cleaning process for evaluating the longitudinal association between 10-year cumulative air pollution exposure (AQI) and the risk of new-onset Chronic Obstructive Pulmonary Disease (COPD) in U.S. adults.
 
 The study utilizes a multi-cohort approach, integrating Electronic Health Records (EHR) with residential history and EPA environmental data to move beyond acute observations toward conclusive evidence of long-term environmental impacts on respiratory health.
 
@@ -7,9 +7,9 @@ The study utilizes a multi-cohort approach, integrating Electronic Health Record
 Is long-term exposure to combustion-related pollutants associated with a higher incidence of COPD, independent of tobacco use and age?
 
 # Repository Structure
-This project is organized into modular directories to ensure technical autonomy and reproducible workflows.
+This project is organized into sub-directories to ensure reproducible workflows and clear documentation.
 
-/documentation: Contains the Statistical Analysis Plan (SAP), project protocols, and the master data dictionary.
+/documentation: Contains the Statistical Analysis Plan (SAP) and the final data dictionary.
 
 /data: Storage for raw and cleaned datasets.
 
@@ -35,8 +35,8 @@ Required Packages: rio, here, tidyverse, janitor
 Before running the analysis, ensure the raw CSV files (cohort-data.csv, icd-data.csv, residential-data.csv) are placed in the /data directory.
 
 3. Execution Flow
-Data Cleaning: Navigate to the /analysis directory and consult the Data Cleaning README. This document outlines the 7 data quality indicators and the specific filtering steps (inclusion/exclusion) required to generate the analysis-ready dataset.
+Data Cleaning: Navigate to the /analysis directory and consult the Data Cleaning README. This document outlines the data cleaning steps required to generate the analysis-ready dataset.
 
 Merging: Run the merging scripts to link clinical and residential data by Participant ID.
 
-Analysis: Execute the modeling scripts once the exposure variables are derived.
+Analysis: TBD

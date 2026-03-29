@@ -1,0 +1,20 @@
+Variable Name,Data Type,Description,Values / Range
+id,Integer,Unique identifier for each study participant.,1 – 3080
+entry_date,Date,The date the participant entered the cohort study.,YYYY-MM-DD
+age,Numeric,Participant's age at the time of study entry.,23 – 85 years
+sex,Categorical,Participant's biological sex.,"Male, Female"
+bmi,Numeric,Body Mass Index calculated as kg/m2.,15.0 – 40.0
+socioeconomic_status,Categorical,Self-reported socioeconomic status level.,"low, medium, high"
+smoking_status,Categorical,Tobacco smoking history at study entry.,"current, former, never"
+loss_to_followup_date,Date,Date the participant exited the study or was last seen.,YYYY-MM-DD
+age_category,Categorical,Binned age for stratified analysis.,"Under 40, 40-49, 50-59, 60-69, 70+"
+bmi_category,Categorical,Binned BMI based on WHO classifications.,"Underweight, Normal, Overweight, Obese"
+hypertension,Date,Date of first Hypertension diagnosis (if applicable).,YYYY-MM-DD or NA
+diabetes,Date,Date of first Diabetes diagnosis (if applicable).,YYYY-MM-DD or NA
+asthma,Date,Date of first Asthma diagnosis (if applicable).,YYYY-MM-DD or NA
+copd,Date,Date of first COPD diagnosis (if applicable).,YYYY-MM-DD or NA
+has_asthma,Binary,Indicator for Asthma diagnosis (baseline/follow-up).,"1 = Yes, 0 = No"
+has_diabetes,Binary,Indicator for Diabetes diagnosis.,"1 = Yes, 0 = No"
+has_hypertension,Binary,Indicator for Hypertension diagnosis.,"1 = Yes, 0 = No"
+has_copd,Binary,Indicator for COPD diagnosis (Outcome variable).,"1 = Yes, 0 = No"
+weighted_exp,Numeric,Proportion of the 10-year window spent in a location.,~1.00 (Total history)

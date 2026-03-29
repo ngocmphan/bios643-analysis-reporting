@@ -149,11 +149,12 @@ date_residential <- residential %>%
   
   
 # Merge dataset
-  cohort_data_final <- clean_cohort %>%
+cohort_data_final <- clean_cohort %>%
     # Joining clean_icd, and clean_res dataset
     left_join(clean_icd, by = "id") %>%
     left_join(clean_res, by = "id") 
   
+export(cohort_data_final, here("data", "cohort_data_final.csv"))
   
 
   

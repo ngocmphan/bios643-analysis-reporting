@@ -14,9 +14,9 @@ icd-data.csv: Longitudinal Electronic Health Records (EHR) containing diagnosis 
 residential-data.csv: Historical residential periods for exposure assessment.
 
 # Cohort Data Cleaning
-The cohort data underwent significant transformation to ensure categorical consistency and to handle technical data artifacts (e.g., Excel date serials).
+The cohort data underwent significant transformation to ensure categorical consistency and date format inconsistencies. 
 
-Schema Standardization: Variables were renamed for clarity (e.g., SEX (1=MALE) to sex) and converted to snake_case.
+Columns renamed: Variables were renamed for clarity (e.g., SEX (1=MALE) to sex) and converted to lower case for consistency.
 
 Deduplication: Applied a strict distinct() filter to remove any identical record repeats across the ID variable.
 
