@@ -37,6 +37,6 @@ Before running the analysis, ensure the raw CSV files (cohort-data.csv, icd-data
 3. Execution Flow
 Data Cleaning: Navigate to the /analysis directory and consult the Data Cleaning README. This document outlines the data cleaning steps required to generate the analysis-ready dataset.
 
-Merging: Run the merging scripts to link clinical and residential data by Participant ID.
+Merging: Run the data-cleaning.R script to obtain the final cleaned data.
 
 Analysis: TBD
