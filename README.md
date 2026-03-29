@@ -11,7 +11,7 @@ This project is organized into modular directories to ensure technical autonomy 
 
 /documentation: Contains the Statistical Analysis Plan (SAP), project protocols, and the master data dictionary.
 
-/data: Storage for raw and intermediate datasets (Note: Raw EHR data is restricted and not tracked via version control).
+/data: Storage for raw and cleaned datasets.
 
 /analysis: The core technical hub of the project.
 
@@ -29,7 +29,7 @@ R (v4.5.2 or later)
 
 RStudio
 
-Required Packages: tidyverse, skimr, survival (for Cox models), and broom.
+Required Packages: rio, here, tidyverse
 
 2. Data Preparation
 Before running the analysis, ensure the raw CSV files (cohort-data.csv, icd-data.csv, residential-data.csv) are placed in the /data directory.

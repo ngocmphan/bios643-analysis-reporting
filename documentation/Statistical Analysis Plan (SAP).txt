@@ -1,0 +1,123 @@
+Background
+
+Chronic Obstructive Pulmonary Disease (COPD) is a prevalent, long-term condition of the respiratory tract that primarily affects older populations, though its roots often reach back into earlier life stages. Characterized by its slow and relentless progression, COPD is considered the leading cause of respiratory insufficiency and remains a significant driver of global morbidity and mortality. At its most basic level, the disease involves a permanent narrowing of the airways and damage to the air sacs in the lungs, making the simple act of breathing an exhausting task. While tobacco smoke is universally recognized as the most significant risk factor for both the development and progression of the disease, researchers are increasingly looking at environmental contributors that mirror the chemical damage caused by smoking.
+
+Several key risk factors contribute to the onset or worsening of COPD, including advanced age, genetic predispositions, and environmental exposures (example - chemical exposure from tobacco smoking). Ambient air pollution—specifically outdoor pollutants resulting from industrial and vehicular combustion—shares many hazardous chemical properties with tobacco smoke. Despite these similarities, the role of ambient air pollution in the underlying chronic processes that lead to a clinical diagnosis of COPD has historically been less investigated than smoking. While an established link exists between air pollution and impaired lung growth during childhood, the scientific community is still working to determine how this impairment transitions into full-onset COPD in later life. ;
+
+The current scientific literature provides clear evidence of the acute effects of air pollution; short-term spikes in pollutants are directly tied to decreased lung function, asthma attacks, and increased hospitalizations. However, the evidence regarding long-term exposure as a primary cause of COPD remains suggestive rather than conclusive. Despite this lack of evidence for this relationship, a causal relationship is biologically plausible due to the exposure similarity to tobacco smoke which is the leading risk factor for progression of COPD. Exposure to pollutants is known to induce oxidative stress—where reactive molecules damage cellular structures—and trigger systemic inflammation. These pathways are likely contributors to the permanent respiratory pathologies that define the disease. Furthermore, because air pollution is known to trigger "exacerbations" (sudden, severe worsening of symptoms), it may indirectly cause the disease to progress more rapidly through repeated injury to lung tissue.
+
+The present study, conducted under the framework of the European Studies on Chronic Air Pollution Effects (ESCAPE) project, provides significant added value by addressing these critical research gaps. By utilizing standardized procedures to measure and model outdoor air pollution concentrations at participants' specific home addresses, the study offers a level of geographical precision often lacking in previous research. Furthermore, by integrating data from four major longitudinal cohort studies—the ECRHS, NSHD, SALIA, and SAPALDIA—it establishes a robust, multi-national dataset that spans different European climates and urban environments. This comprehensive approach allows researchers to move beyond simple observations and investigate the association of ambient air pollution with both the prevalence (the total number of existing cases) and the incidence (the rate of new cases appearing) of COPD across diverse populations. This data is essential for moving the evidence from "suggestive" to "conclusive," ultimately informing public health policies aimed at reducing the global burden of chronic lung disease.
+
+
+Study objectives and hypotheses
+
+Primary Objective
+
+To evaluate the longitudinal association between 10-year cumulative exposure to combustion-related pollutants—quantified via the Air Quality Index (AQI)—and the risk of new-onset COPD in adults. Following the framework established by the ESCAPE project and the American Thoracic Society's suggestive findings, this study aims to determine if prolonged exposure to ambient pollution serves as an independent predictor of disease development, even after adjusting for critical confounding variables such as tobacco smoke and chronological age.
+
+Secondary Objectives
+
+Pollutant Sensitivity Analysis: To conduct a detailed sensitivity analysis by disaggregating the AQI into specific pollutant concentrations ;to identify which components of combustion-related air pollution most significantly drive COPD incidence and progression.
+
+Interaction Modeling: To assess the potential ;effects between air pollution and tobacco use, determining whether smoking status acts as an effect modifier that exacerbates the impact of environmental pollutants on respiratory health.
+
+Progression Evaluation: To investigate the relationship between localized air quality and the rate of lung function decline in individuals already diagnosed with COPD, focusing on the frequency of acute exacerbations over the 10-year study period.
+
+Data sources and study population
+1. Environmental Exposure Data (EPA)
+
+The exposure assessment utilizes Annual Summary Data at the county level, sourced from the Environmental Protection Agency (EPA) for the 10-year study period.
+
+Structure: Observations are organized by State and County.
+
+Key Variables: Includes pollutant-specific metrics (e.g., $PM_{2.5}$, $NO_2$, $O_3$), the annual mean concentration, the maximum AQI, and the total number of days exceeding National Ambient Air Quality Standards (NAAQS).
+
+2. Clinical and Residential Cohort Data (EHR)
+
+Clinical and demographic data are derived from three primary files extracted from the EHR database:
+
+A. Baseline Cohort (cohort-data.csv)
+
+This file contains one unique row per individual and defines the study population at the point of entry.
+
+Demographics: Includes age at entry, sex, and bmi.
+
+Covariates: Captures smoke status (Former, Current, Never) and socioeconomic_status (Low, Medium, High).
+
+Timeline: Tracks the entrydate and date_losstofollowup.
+
+B. Clinical Outcomes (icd-data.csv)
+
+This longitudinal file contains multiple rows per individual, recording every ICD-coded event within the healthcare system.
+
+Diagnostic Tracking: Uses icd_code and description to identify the primary outcome.
+
+Temporal Data: The icd_date is used to determine the exact timing of the first COPD diagnosis (ICD codes J44.0, J44.1, J44.9) relative to the ehr_entry_date.
+
+C. Residential History (residential-data.csv)
+
+To accurately model 10-year exposure, this file tracks geographic movement over time.
+
+Structure: Contains multiple rows per individual to account for relocation.
+
+Spatial Variables: Records the state and county of residence.
+
+Temporal Variables: Uses address_start_date and address_end_date to calculate the number of days spent in each county, enabling the calculation of the Time-Weighted Average (TWA) for AQI exposure.
+
+Inclusion and exclusion criteria
+Inclusion Criteria
+Aged ;40 years or older ;at cohort entry date.
+Continuous residential data:
+Start of first address must be at least ;10 years prior to index date.
+End of last address at cohort entry date or later.
+Rationale: ;These requirements ensure that air pollution exposure can be calculated for the full 10-year period prior to cohort entry.
+EHR linkage:
+Entry in ICD data set at least ;1 year prior to cohort entry date ;to measure comorbidities and rule out prior COPD diagnosis.
+Date of loss to follow-up in cohort data set at least ;30 days after cohort entry date ;to ensure minimal follow-up.
+Exclusion Criteria
+Individuals with a COPD diagnosis code in the ;1-year prior to cohort entry date ;will be excluded from the study.
+Exposure and outcome definitions
+1. Outcome: Time-to-Event (COPD)
+
+Event: First diagnosis of COPD using ICD-10 codes J44.0, J44.1, or J44.9.
+
+Censoring ($C$): * $C=1$: Diagnosis occurs after cohort entry.
+
+$C=0$: No diagnosis by end of study, death, or loss to follow-up.
+
+Time ($T$): Days from baseline entry to either the event date or the censoring date.
+
+2. Primary Exposure: 10-Year Weighted AQI
+
+Exposure is defined as the Time-Weighted Average (TWA) of the annual median AQI over 10 years:
+
+Formula: $E_i = \frac{\sum (AQI_{year} \times Days_{residence})}{\sum Days}$
+
+Mobility: For address changes, the annual AQI is pro-rated based on the number of days spent in each county.
+
+Missing Data: County gaps are filled using the mean AQI of contiguous counties; participants missing $&gt;20\%$ of residential history are excluded.
+
+3. Secondary Exposure Categorizations
+
+To test for dose-response relationships, the continuous 10-year AQI will be transformed into:
+
+EPA Tiers: Categorized by regulatory thresholds (e.g., Good: 0–50, Moderate: 51–100).
+
+Study Quartiles: Divided into four equal groups ($Q_1$ to $Q_4$) based on the distribution within the study population to compare the highest vs. lowest exposure risks.
+
+Covariates and confounders
+Variable Name	Description	Values	Derivation	Justification
+Age	Chronological age at the time of cohort entry.	Numeric (Years)	Extracted directly from cohort-data.csv.	Age is a primary risk factor for COPD and a strong predictor of lung function decline.
+Biological Sex	The sex of the individual recorded at baseline.	Categorical (Male, Female)	Extracted directly from cohort-data.csv.	Respiratory physiology and susceptibility to environmental pollutants can vary significantly between sexes.
+BMI	Body Mass Index; a measure of body fat based on height/weight.	Numeric ($kg/m^2$)	Extracted directly from cohort-data.csv.	Low BMI is often associated with advanced COPD severity, while high BMI can complicate respiratory mechanics.
+Socioeconomic Status (SES)	The economic and social position of the individual.	Categorical (Low, Medium, High)	Extracted directly from cohort-data.csv.	SES is a surrogate for healthcare access, nutrition, and potential occupational exposures that could confound the pollution-COPD link.
+Smoking Status	History of tobacco use at the time of entry.	Categorical (Current, Former, Never)	Extracted directly from cohort-data.csv.	Critical Confounder. Tobacco smoke is the leading cause of COPD and shares similar toxic pathways with air pollution; it must be adjusted for to isolate pollution effects.
+Residential Stability	Cumulative time spent in a specific geographic location.	Numeric (Days/Years)	Calculated by finding the difference between address_start_date and address_end_date in residential-data.csv.	Essential for ensuring the 10-year exposure window is accurate and for weighting the AQI correctly.
+Comorbidity Baseline	Presence of other relevant ICD-coded conditions at entry.	Binary (Yes/No)	Extracted from icd-data.csv by checking for codes prior to the entrydate.	Existing conditions (like asthma) may increase vulnerability to air pollution or influence the rate of COPD onset.
+
+
+
+
+Statistical methods and sensitivity analyses
+
+To be determined
