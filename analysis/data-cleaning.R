@@ -93,7 +93,7 @@ clean_icd <- icd %>%
     TRUE ~ "other"
   )) %>%
   
-  # Change from long format to wide format
+  # Change from long format to wide format, and include the date of first diagnosis in the wide format
   group_by(id, disease_category) %>%
   summarize(first_diag_date = min(as.Date(icd_date)), .groups = "drop") %>%
   pivot_wider(
@@ -101,13 +101,17 @@ clean_icd <- icd %>%
     values_from = first_diag_date
   ) %>%
   
+  # Include binary columns of the relevant diagnosis: Asthma, diabetes, hypertension, copd
   mutate(
     has_asthma = if_else(!is.na(asthma), 1, 0),
     has_diabetes = if_else(!is.na(diabetes), 1, 0),
     has_hypertension = if_else(!is.na(hypertension), 1, 0),
     has_copd = if_else(!is.na(copd), 1, 0)
   ) %>%
+  
+  # Standardized the column names
   clean_names()
+
 
 ## residential data cleaning
 
@@ -120,7 +124,7 @@ date_residential <- residential %>%
     window_start = entry_date.x - years(10)
   ) %>%
   
-  # Clip the residential periods to fit within the 10-year window
+  # Cut-off the residential periods to fit within the 10-year window based on the entry cohort date
   mutate(
     actual_start = pmax(address_start_date, window_start),
     actual_end = pmin(address_end_date, window_end)

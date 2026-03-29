@@ -42,7 +42,7 @@ The ICD dataset was transformed from a long-format longitudinal record into a wi
 
 Disease Categorization: Utilized case-insensitive string detection to identify four key health outcomes: Asthma, Diabetes, Hypertension, and COPD.
 
-Temporal Collapsing: For each participant and disease, only the min(icd_date) (first occurrence) was retained to define the onset of the condition.
+Date relevant to the study: For each participant and disease, only the min(icd_date) (first occurrence) was retained to define the onset of the condition.
 
 Binary encoding: Created indicator variables (1/0) for each disease category. A value of 1 indicates the presence of that condition in the participant's history.
 
@@ -54,7 +54,7 @@ Window Definition: A rolling 10-year window was established for every participan
 
 Cut-off window per individual: Residential periods were "clipped" to fit strictly within this window using pmax and pmin.
 
-If a person lived in a house for 20 years, only the 10 years relevant to the study window were counted.
+For example, if a person lived in a house for 20 years, only the 10 years relevant to the study window were counted.
 
 Weighted Exposure Calculation: * Calculated days_in_window using difftime.
 
