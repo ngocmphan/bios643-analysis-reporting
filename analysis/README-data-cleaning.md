@@ -20,7 +20,7 @@ Columns renamed: Variables were renamed for clarity (e.g., SEX (1=MALE) to sex) 
 
 Deduplication: Applied a strict distinct() filter to remove any identical record repeats across the ID variable.
 
-Date Normalization: Handled inconsistent date formatting by:
+Date Normalization: Handled inconsistent date formatting for both Entry_date and date_loss_to_followup
 
 - Parsing standard MM/DD/YYYY strings.
 
@@ -28,6 +28,7 @@ Date Normalization: Handled inconsistent date formatting by:
 
 Outlier Management: An "Age" value of 345 was identified as a data entry error and recoded to NA to prevent skewing statistical models.
 
+Smoking variable inconsistent values between "Former" or "former". Values of the variable are transformed to all lower cases. 
 Feature Engineering:
 
 - Sex: Recoded from 1/0 to "Male"/"Female".
@@ -38,7 +39,7 @@ Feature Engineering:
 
 
 # Clinical Data Processing (ICD)
-The ICD dataset was transformed from a long-format longitudinal record into a wide-format summary of baseline comorbidities.
+The ICD dataset was transformed from a long-format longitudinal record into a wide-format summary of the relevant health issues in the study. 
 
 Disease Categorization: Utilized case-insensitive string detection to identify four key health outcomes: Asthma, Diabetes, Hypertension, and COPD.
 
@@ -46,11 +47,12 @@ Date relevant to the study: For each participant and disease, only the min(icd_d
 
 Binary encoding: Created indicator variables (1/0) for each disease category. A value of 1 indicates the presence of that condition in the participant's history.
 
+All the column names were standardized to lower cases. 
 
 # Residential Exposure Modeling
 This step processes residential history to prepare for air quality exposure calculations. The study requires a 10-year lookback window from the date of study entry.
 
-Window Definition: A rolling 10-year window was established for every participant (entry_date minus 10 years).
+Window Definition: A rolling 10-year window was established for every participant by the entry cohort date, and entry_date - 10 years.
 
 Cut-off window per individual: Residential periods were "clipped" to fit strictly within this window using pmax and pmin.
 
@@ -61,6 +63,8 @@ Weighted Exposure Calculation: * Calculated days_in_window using difftime.
 Calculated exposure_weight by dividing the days spent in a specific county by 3,650 (the approximate number of days in 10 years).
 
 Interpretation: A weighted_exp of ~1.000 indicates a participant has a complete 10-year residential history documented in the dataset.
+
+All the column names were standardized to lower cases. 
 
 
 # Final Dataset Integration
