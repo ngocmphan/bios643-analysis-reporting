@@ -15,11 +15,9 @@ This project is organized into sub-directories to ensure reproducible workflows 
 
 /analysis: The core technical hub of the project.
 
-/analysis/README.md: Refer to this file for specific instructions on data cleaning, merging logic, and script execution.
+/analysis/README-data-cleaning.md: Refer to this file for specific instructions on data cleaning, merging logic, and script execution.
 
-/analysis/scripts: Annotated R scripts for cleaning and statistical modeling.
-
-/analysis/output: Generated tables, figures, and summary statistics.
+/analysis/data-cleaning.R: Data cleaning script used to produce the cleaned data for further analysis.
 
 # Getting Started & Reproducibility
 1. Prerequisites
