@@ -4,7 +4,7 @@ This repository contains the complete research pipeline for evaluating the longi
 The study utilizes a multi-cohort approach, integrating Electronic Health Records (EHR) with residential history and EPA environmental data to move beyond acute observations toward conclusive evidence of long-term environmental impacts on respiratory health.
 
 ## Research Question
-Is long-term exposure to combustion-related pollutants associated with a higher incidence of COPD, independent of tobacco use and chronological age?
+Is long-term exposure to combustion-related pollutants associated with a higher incidence of COPD, independent of tobacco use and age?
 
 # Repository Structure
 This project is organized into modular directories to ensure technical autonomy and reproducible workflows.
@@ -29,7 +29,7 @@ R (v4.5.2 or later)
 
 RStudio
 
-Required Packages: rio, here, tidyverse
+Required Packages: rio, here, tidyverse, janitor
 
 2. Data Preparation
 Before running the analysis, ensure the raw CSV files (cohort-data.csv, icd-data.csv, residential-data.csv) are placed in the /data directory.

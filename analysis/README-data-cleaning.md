@@ -44,7 +44,7 @@ Disease Categorization: Utilized case-insensitive string detection to identify f
 
 Temporal Collapsing: For each participant and disease, only the min(icd_date) (first occurrence) was retained to define the onset of the condition.
 
-Binary Flagging: Created indicator variables (1/0) for each disease category. A value of 1 indicates the presence of that condition in the participant's history.
+Binary encoding: Created indicator variables (1/0) for each disease category. A value of 1 indicates the presence of that condition in the participant's history.
 
 
 # Residential Exposure Modeling
@@ -52,7 +52,7 @@ This step processes residential history to prepare for air quality exposure calc
 
 Window Definition: A rolling 10-year window was established for every participant (entry_date minus 10 years).
 
-Temporal Clipping: Residential periods were "clipped" to fit strictly within this window using pmax and pmin.
+Cut-off window per individual: Residential periods were "clipped" to fit strictly within this window using pmax and pmin.
 
 If a person lived in a house for 20 years, only the 10 years relevant to the study window were counted.
 
@@ -64,9 +64,9 @@ Interpretation: A weighted_exp of ~1.000 indicates a participant has a complete 
 
 
 # Final Dataset Integration
-The final master dataset was constructed using a series of Left Joins, anchored by the clean_cohort data.
+The final master dataset was constructed using a series of Left Joins, with main file as the clean_cohort data.
 
-Anchor: clean_cohort (Ensures all recruited participants are present).
+Main file: clean_cohort (Ensures all recruited participants are present).
 
 Merge 1: Joined clean_icd to add baseline health status.
 
