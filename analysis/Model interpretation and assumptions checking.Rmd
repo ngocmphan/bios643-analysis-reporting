@@ -1,0 +1,42 @@
+---
+title: "Air pollution and COPD analysis"
+output: html_document
+date: "2026-04-05"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+pacman::p_load(rio, here, tidyverse, dplyr, survival)
+cohort_data <- import(here("data", "cohort-data-primary-analysis_final.csv")) %>% 
+  mutate(
+    asthma = factor(asthma),
+    diabetes = factor(diabetes),
+    hypertension = factor(hypertension)
+  )
+```
+
+
+# Model analysis
+
+## Primary model
+```{r model analysis, echo=FALSE}
+# Fit the Cox Proportional Hazards Model
+cox_model <- coxph(
+  Surv(time_to_copd, copd_diagnosis) ~ aqi_exposure + age + sex + asthma + smoking_status + bmi + ses_status + diabetes + hypertension,
+  data = cohort_data
+)
+
+# Print Model Summary
+summary(cox_model)
+```
+
+## verification of model assumption
+
+
+## Standardization
+
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
