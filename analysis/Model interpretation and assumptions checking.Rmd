@@ -1,17 +1,20 @@
 ---
 title: "Air pollution and COPD analysis"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 date: "2026-04-05"
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-pacman::p_load(rio, here, tidyverse, dplyr, survival)
+pacman::p_load(rio, here, tidyverse, dplyr, survival, survminer, ggplot2)
 cohort_data <- import(here("data", "cohort-data-primary-analysis_final.csv")) %>% 
   mutate(
     asthma = factor(asthma),
     diabetes = factor(diabetes),
-    hypertension = factor(hypertension)
+    hypertension = factor(hypertension), 
+    age = ifelse(age == 345, NA, age)
   )
 ```
 
@@ -26,17 +29,107 @@ cox_model <- coxph(
   data = cohort_data
 )
 
-# Print Model Summary
+# Model Summary
 summary(cox_model)
 ```
+Based on the results above from the Cox proportional hazard model for COPD diagnosis through 10 years period, we noted that the following variables are statistically significant (confidence interval of 0.05) with their associated interpretations: 
+
+- aqi_exposure: For an increase in one unit of aqi_exposure, there is an increase in odds of receiving COPD diagnosis by 2.7% keeping all other variables the same. 
+- age: For an increase of one unit in age, there is an increase in odds of receiving COPD diagnosis by 1.5% keeping all other variables the same. 
+- asthma: A diagnosis in asthma increases the odds of receiving COPD diagnosis by 277% compared to those without asthma. This variable is the strongest predictor based on the considerable increase in odds. 
+- bmi: For an increase in one unit of BMI, there is an increase in odds of receiving COPD diagnosis by 5.8% keeping all other variables the same. 
+- ses_statusMedium: The socio-economical predictor acts as a protective factor as individual with Medium socio-economical factor have 37% lower risks of COPD diagnosis compared to High socio-economical level. Noted that Low socio-economic factor is not statiscally significant in the model; however it also reduces the risks of COPD diagnosis by 30%. Despite this results, we also need to consider additional factor like access to healthcare and frequency of healthcare of Medium and Low SES groups, and if accessibility to receive diagnosis is a confounding factor, and if this is the case, the predictor would not be considered protective. 
 
 ## verification of model assumption
 
+```{r model assumption, echo=FALSE}
+# Fit the Cox Proportional Hazards Model
+cox_model <- coxph(
+  Surv(time_to_copd, copd_diagnosis) ~ aqi_exposure + age + sex + asthma + smoking_status + bmi + ses_status + diabetes + hypertension,
+  data = cohort_data
+)
 
-## Standardization
+# Verifying: Proportional hazards assumption
+test_ph <- cox.zph(cox_model)
+print(test_ph)
+ggcoxzph(test_ph, ncol = 3, nrow = 3, point.size = 0.3)
 
+# Verifying: Linearity of continous variables: age, bmi, aqi_exposure
+linearity_aqi <- ggplot(cohort_data, aes(x = aqi_exposure, y = time_to_copd, shape = factor(copd_diagnosis))) + 
+  geom_point(alpha = 0.5) +
+  geom_smooth(aes(group = 1), method = "loess", se = FALSE, color = "red") + 
+  scale_y_continuous(trans = "log") + # Class requirement: Log of time
+  theme_minimal() +
+  labs(title = "Log(time to copd) and AQI exposure", x = "AQI Exposure", y = "Log(Time)", shape = "Status")
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+linearity_bmi <- ggplot(cohort_data, aes(x = bmi, y = time_to_copd, shape = factor(copd_diagnosis))) + 
+  geom_point(alpha = 0.5) +
+  geom_smooth(aes(group = 1), method = "loess", se = FALSE, color = "red") + 
+  scale_y_continuous(trans = "log") + # Class requirement: Log of time
+  theme_minimal() +
+  labs(title = "Log(time to copd) and BMI", x = "BMI", y = "Log(Time)", shape = "Status")
+
+linearity_age <- ggplot(cohort_data, aes(x = age, y = time_to_copd, shape = factor(copd_diagnosis))) + 
+  geom_point(alpha = 0.5) +
+  geom_smooth(aes(group = 1), method = "loess", se = FALSE, color = "red") + 
+  scale_y_continuous(trans = "log") + # Class requirement: Log of time
+  theme_minimal() +
+  labs(title = "Log(time to copd) and age", x = "Age", y = "Log(Time)", shape = "Status")
+
+linearity_aqi
+linearity_bmi
+linearity_age
+
 ```
+
+
+To evaluate the assumptions of  the Cox Proportional Hazards model, we evaluated two elements: 
+
+- Linearity of covariates in log hazard function: In order to evaluate the linearity, the plots between the log(time to copd) and continous predictors were examined. Based on the plots above with the statistically significant predictors (AQI exposure, BMI, Age), we noted that the relationship between the log of the hazard and the continuous variables (AQI exposure, BMI, and AGE) is relatively straight, and showing no curves indicating violation of the assumption. 
+
+- Proportional hazards assumption: To evaluate the proportional hazards assumptions, we assess assumption through the Schoenfeld test and associated plots for all the predictors. We noted that the p-value Global Schoenfeld test of 0.67 indicating no violation for time-dependent effects, furthermore, individual plots of the predictors show no clear trend over time. 
+
+From this, we noted that the assumptions for the Cox Proportional hazards model are not violated.
+
+## Standardization AQI_Exposure
+```{r model analysis - Standardized aqi, echo=FALSE}
+# Fit the Cox Proportional Hazards Model
+cox_model <- coxph(
+  Surv(time_to_copd, copd_diagnosis) ~ scale(aqi_exposure) + age + sex + asthma + smoking_status + bmi + ses_status + diabetes + hypertension,
+  data = cohort_data
+)
+# Scaled aqi_exposure
+print("Standard deviation of aqi_exposure variable")
+print(sd(cohort_data$aqi_exposure))
+
+# Model Summary
+summary(cox_model)
+```
+We scaled the AQI_exposure predictor above and noted changes in the model regarding the interpretation for the aqi_exposure predictor. Based on the scaled aqi_exposure above, for an increase in one standard deviation in AQI exposure, the odd of receiving COPD diagnosis increases by 91%. From this, a standard deviation of AQI_Exposure variable is 22.5, for an increase in 22.5 unit of AQI_exposure, the odd is increased by 91%. 
+
+
+## Interaction term
+```{r model analysis - Interaction term, echo=FALSE}
+# Fit the Cox Proportional Hazards Model
+cox_model <- coxph(
+  Surv(time_to_copd, copd_diagnosis) ~ aqi_exposure + age + sex + asthma + smoking_status + bmi + ses_status + diabetes + hypertension + aqi_exposure*sex,
+  data = cohort_data
+)
+
+# Model Summary
+summary(cox_model)
+```
+
+Based on the multivariable Cox model, AQI exposure, Age, Asthma, BMI, and Medium Socioeconomic Status were identified as statistically significant predictors of COPD diagnosis. While the interaction term between AQI and Sex suggested a negligible $0.1\%$ decrease in hazard for males compared to females ($HR = 0.9995$), this effect was not statistically significant ($p > 0.05$). The calculated total effect for males ($HR = 1.028$) is nearly identical to the effect for females ($HR = 1.029$), indicating that for every one-unit increase in AQI exposure, the hazard of a COPD diagnosis increases by approximately $2.8\%–2.9\%$ regardless of biological sex. Consequently, these data suggest that sex does not modify the relationship between air pollution and COPD risk in this cohort.
+
+# Multiple imputation
+
+Multiple imputation is used to handle missing values in the dataset either from a single variable or multiple variables. Three main steps are performed in the process of multiple imputation. 
+
+1. Imputation step: In this stage, k separate versions of the "complete" dataset are created. For multiple variables, a fill in phase is performed: missing values are initially filled with placeholders, then each variable is updated by regressing it against the others in a repeating cycle until the values stabilize. To reflect real-world uncertainty, a random component is added to each prediction so that each of the k datasets is slightly different.
+
+2. Analysis step: The chosen statistical model (Example: stochastic regresison model) is run independently on each of the k imputed datasets. This results in k sets of coefficients and standard errors. Because the imputed values vary across datasets, the model results will also vary slightly, capturing the "noise" created by the missing information.
+
+
+3. Pooling Step: In the final step, the results from all k models are combined using Rubin’s Rules. The final coefficients are the average of the k estimates, and the final standard errors are adjusted to account for both the variance within each dataset and the variance between them. This ensures that the final p-values and confidence intervals accurately reflect the uncertainty of the missing data.
 
