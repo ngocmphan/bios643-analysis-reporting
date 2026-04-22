@@ -1,0 +1,400 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+\documentclass[
+]{article}
+\usepackage{xcolor}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math} % this also loads fontspec
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+\usepackage{lmodern}
+\ifPDFTeX\else
+  % xetex/luatex font selection
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{longtable,booktabs,array}
+\usepackage{calc} % for calculating minipage widths
+% Correct order of tables after \paragraph or \subparagraph
+\usepackage{etoolbox}
+\makeatletter
+\patchcmd\longtable{\par}{\if@noskipsec\mbox{}\fi\par}{}{}
+\makeatother
+% Allow footnotes in longtable head/foot
+\IfFileExists{footnotehyper.sty}{\usepackage{footnotehyper}}{\usepackage{footnote}}
+\makesavenoteenv{longtable}
+\usepackage{graphicx}
+\makeatletter
+\newsavebox\pandoc@box
+\newcommand*\pandocbounded[1]{% scales image to fit in text height/width
+  \sbox\pandoc@box{#1}%
+  \Gscale@div\@tempa{\textheight}{\dimexpr\ht\pandoc@box+\dp\pandoc@box\relax}%
+  \Gscale@div\@tempb{\linewidth}{\wd\pandoc@box}%
+  \ifdim\@tempb\p@<\@tempa\p@\let\@tempa\@tempb\fi% select the smaller of both
+  \ifdim\@tempa\p@<\p@\scalebox{\@tempa}{\usebox\pandoc@box}%
+  \else\usebox{\pandoc@box}%
+  \fi%
+}
+% Set default figure placement to htbp
+\def\fps@figure{htbp}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\usepackage{bookmark}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\urlstyle{same}
+\hypersetup{
+  pdftitle={Final report},
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+
+\title{Final report}
+\author{}
+\date{\vspace{-2.5em}2026-04-19}
+
+\begin{document}
+\maketitle
+
+\section{Abstract}\label{abstract}
+
+\section{Introduction}\label{introduction}
+
+\section{Methods}\label{methods}
+
+\subsubsection{Study design and
+participants}\label{study-design-and-participants}
+
+The study follows a cohort study design with data from Electronic health
+record (EHR) from a multi-center healthcase system in the United States
+including the patient information, comorbidities diagnostic codes, and
+residential addresses associated and period of habitation. In addition,
+air pollution data from Environmental Protection Agency (EPA) was used
+in the study with Air quality index (AQI) values for associated county
+and availability of AQI by year in the study.
+
+Participants were included in the cohort if the entry date of the
+participant during the index period between January 1st, 2005 and
+December 31st, 2010, participants' age of 40 years or older, and
+availability of residential data of 10 years minimum prior to the index
+date.
+
+\subsubsection{Data handling}\label{data-handling}
+
+The raw dataset underwent a cleaning and transformation process to
+ensure clinical interpretability, data validity, and adherence to the
+defined inclusion of the criteria. The initial preprocessed cleaning
+ensure the standardization of predictors names and data format
+consistency; the standardization converted all predictors names to
+lowercase convention, and the temporal variables normalized to date
+formatting of MM/DD/YYYY. This phase included the reconciliation of
+categorical inconsistencies, specifically mixed case entries values in
+categorical variables detected in Smoking status variable. In addition,
+remapping of binary integers to descriptive strings to facilitate the
+interpretation of the analytical results.
+
+Feature engineering was performed for Age variable to transform
+continuous variable to appropriate and interpretable bins: \textless40,
+40--49, 50--59, 60--69, and 70+ years. Body Mass Index (BMI) was
+categorized into four ordinal categories based on World Health
+Organization (WHO) definitions.
+
+In order to quantify and assess the environmental risk and exposure, AQI
+exposure metric was defined as the weighted air pollution exposure based
+on residential address records and EPA monitoring data accounted for
+10-year exposure indexed in the study.
+
+Data quality control measures were performed to identify outliers, data
+redundancies and missing data. Duplicated observations of participant ID
+were removed to ensure unique record for each individual within the
+cohort. An outlier in the age value of 345 was identified and recoded as
+NA to prevent bias in the models. In order to address the missing data
+in the AQI exposure predictor, two approaches were tested: Complete Case
+Analysis (CCA) and Multivariate Imputation by Chained Equation (MICE).
+The CCA approach was performed to remove the data across all variables
+where AQI exposure is missing, where MICE approach was employed to
+estimate missing values with statistical estimate. Specifically,
+Predictive Mean Matching (PMM) method was employed in MICE approach in
+which the imputed values are sampled from observed data points in the
+dataset. To account for uncertainty inherent in the imputation process,
+we generated 20 independent datasets that include different estimates
+for the missing values. For each imputed dataset, a time weighted
+average AQI of median AQI value was calculated by integrating the
+residential history of each participant.
+
+\subsection{Statistical analysis}\label{statistical-analysis}
+
+The primary association between air pollution exposure and the ten-year
+risk of receiving COPD diagnosis was evaluated using Cox Proportional
+Hazard models. To ensure the robust of the assessment, the weighted AQI
+expsosure predictor was analyzed through three distinct variations: as a
+continous numerical scale, data-derived quartiles (Q1-Q4), and according
+to regulatory EPA categories (e.g.~``Good'', ``Moderate'', ``Unhealthy
+for Sensitive Groups''). All models were adjusted for potential
+confounding factors including age, sex, asthma diagnosis, smoking
+status.
+
+Statistical evidence was assessed using Hazard Ratios (HR) with
+corresponding 95\% confidence intervals (CI), and results visualizaed
+with forest plots to compare different exposure variations. Additional
+sensitivity analysis was conducted by comparing results from CCA model
+against those from MICE imputed model. The resulting estimate from the
+MICE imputed model were aggregated using Rubin's Rules; the pooling
+procedure reported the point estimates and 95\% CI reflecting the
+variance of within imputation and between imputation. This is used to
+confirm the stability of the observed risk due to the missing AQI values
+of EPA dataset. All statistical tests were two sided and a p-value of
+\textless{} 0.05 was considered statistically significant.
+
+\section{Results}\label{results}
+
+\subsubsection{Cohort characteristics}\label{cohort-characteristics}
+
+Following the application of the inclusion criteria, the final
+analytical cohort consisted of 1,973 participants, among whom 176 COPD
+events were recorded (8.9\% incidence). The baseline demographic and
+clinical characteristics of the study population, stratified by COPD
+diagnosis, are summarized in Table 1.
+
+The cohort was characterized by a balanced distribution of biological
+sex, with males representing 50.1\% of the non-COPD group and 52.3\% of
+the COPD group. Analysis of age distribution revealed that the highest
+proportions of COPD diagnoses occurred in the 60--69 (42.0\%) and 70--79
+(27.3\%) age categories. Clinically, a substantial disparity was
+observed in asthma prevalence: 30.1\% of participants in the COPD cohort
+had a history of asthma, compared to only 8.8\% in the non-COPD cohort.
+
+Behavioral factors, specifically smoking status, were relatively
+comparable across both groups; 60.2\% of COPD cases and 63.7\% of
+non-cases reported having ``never'' smoked. However, regarding
+environmental exposure, the mean weighted AQI was markedly higher in the
+COPD cohort (53.60; SD: 18.69) than in the non-COPD cohort (40.67; SD:
+22.55). These descriptive findings suggest that while traditional risk
+factors such as sex and smoking status were balanced, age, asthma
+history, and environmental pollution levels were notably differentiated
+by COPD diagnosis status.
+
+\paragraph{\texorpdfstring{\emph{Table 1 - Cohort
+characteristics}}{Table 1 - Cohort characteristics}}\label{table-1---cohort-characteristics}
+
+\begin{longtable}[]{@{}llll@{}}
+\toprule\noalign{}
+& level & No & Yes \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+n & & 1797 & 176 \\
+Age category (\%) & 40-49 & 207 (11.5) & 3 (1.7) \\
+& 50-59 & 542 (30.2) & 32 (18.2) \\
+& 60-69 & 683 (38.0) & 74 (42.0) \\
+& 70-79 & 309 (17.2) & 48 (27.3) \\
+& 80+ & 56 (3.1) & 19 (10.8) \\
+Sex (\%) & Female & 897 (49.9) & 84 (47.7) \\
+& Male & 900 (50.1) & 92 (52.3) \\
+BMI category (\%) & Normal weight & 637 (35.4) & 49 (27.8) \\
+& Obesity & 368 (20.5) & 49 (27.8) \\
+& Overweight & 661 (36.8) & 70 (39.8) \\
+& Underweight & 131 (7.3) & 8 (4.5) \\
+Smoking status (\%) & Current & 196 (10.9) & 25 (14.2) \\
+& Former & 457 (25.4) & 45 (25.6) \\
+& Never & 1144 (63.7) & 106 (60.2) \\
+Asthma (\%) & No & 1639 (91.2) & 123 (69.9) \\
+& Yes & 158 (8.8) & 53 (30.1) \\
+Diabetes (\%) & No & 1568 (87.3) & 143 (81.2) \\
+& Yes & 229 (12.7) & 33 (18.8) \\
+Hypertension (\%) & No & 1095 (60.9) & 107 (60.8) \\
+& Yes & 702 (39.1) & 69 (39.2) \\
+AQI Exposure (mean (SD)) & & 40.67 (22.55) & 53.60 (18.69) \\
+Socioeconomic status (\%) & Low & 519 (28.9) & 53 (30.1) \\
+& Medium & 927 (51.6) & 81 (46.0) \\
+& High & 351 (19.5) & 42 (23.9) \\
+\end{longtable}
+
+\subsubsection{Primary multivariate analysis: AQI and COPD
+risk}\label{primary-multivariate-analysis-aqi-and-copd-risk}
+
+The association between long-term air pollution exposure (based on AQI
+Exposure variable) and the COPD risk was evaluated using Cox
+Proportional hazards model. After adjusting for demographics variables
+(Age, Sex), Clinical related factors(Asthma diagnosis, BMI, Diabetes
+status, Hypertension status), Smoking status and socioeconomic status
+variables, the weighted AQI exposure remained a significant predictor
+for COPD diagnosis with HR: 1.03; 95\% CI: 1.02--1.04; p \textless{}
+0.001. This indicates that for every one unit increase in the AQI
+exposure, there is a 3\% increase in the risk of COPD diagnosis.
+
+Based on Table 2, the demographic variable such as Age, and clinical
+related factors such as Asthma, and BMI showed strong associations
+regarding the risk of receiving COPD diagnosis. Asthma was a critical
+predictor where a three-fold increase in risk of COPD diagnosis for the
+positive diagnosis of Asthma. Regarding age predictor, an increase in
+one year of age was associated with 6.2\% increase in risk of receiving
+COPD diagnosis, similarly for BMI predictor with HR: 1.06; p \textless{}
+0.001. We noted that Smoking status and biological sex predictors were
+not statistically significant in the results.
+
+\paragraph{\texorpdfstring{\emph{Table 2 - Primary model
+results}}{Table 2 - Primary model results}}\label{table-2---primary-model-results}
+
+\begin{verbatim}
+## # A tibble: 11 x 7
+##    term                 estimate std.error statistic  p.value conf.low conf.high
+##    <chr>                   <dbl>     <dbl>     <dbl>    <dbl>    <dbl>     <dbl>
+##  1 aqi_exposure            1.03    0.00387     7.41  1.29e-13    1.02      1.04 
+##  2 age                     1.06    0.00832     7.23  4.93e-13    1.04      1.08 
+##  3 sexMale                 1.08    0.154       0.527 5.98e- 1    0.802     1.47 
+##  4 asthma                  3.48    0.166       7.51  5.94e-14    2.51      4.82 
+##  5 smoking_statusFormer    0.903   0.253      -0.405 6.85e- 1    0.550     1.48 
+##  6 smoking_statusNever     0.790   0.226      -1.04  2.97e- 1    0.508     1.23 
+##  7 bmi                     1.06    0.0153      3.78  1.57e- 4    1.03      1.09 
+##  8 ses_statusLow           0.694   0.209      -1.74  8.10e- 2    0.460     1.05 
+##  9 ses_statusMedium        0.632   0.192      -2.40  1.64e- 2    0.434     0.919
+## 10 diabetes                1.20    0.196       0.923 3.56e- 1    0.816     1.76 
+## 11 hypertension            0.803   0.158      -1.39  1.65e- 1    0.590     1.09
+\end{verbatim}
+
+\subsubsection{Model diagnostics and
+assumptions}\label{model-diagnostics-and-assumptions}
+
+The validity of Cox Proportional Hazards model was confirmed through an
+assessment of its underlying assumptions. To evaluate the linearity of
+continous covariates, the relationship between the log-hazard of COPD
+and continuous predictors---including weighted AQI exposure, BMI, and
+age---was examined. Visual inspection of these functional forms
+confirmed a linear relationship for all variables, indicating that the
+linearity assumption was satisfied without the need for non-linear
+transformations. (see Appendix Figure 1)
+
+Furthermore, the proportional hazards assumption was evaluated using
+both global and individual Schoenfeld residual diagnostics. he global
+Schoenfeld test yielded a non-significant result (p = 0.67), suggesting
+that the hazard ratios remained constant over the follow-up period.
+Graphical analysis of the Schoenfeld residuals across all predictors
+demonstrated no discernible trends or time-dependent effects.
+Collectively, these diagnostics confirm that the fundamental assumptions
+of the Cox Proportional Hazards model were met, ensuring the reliability
+of the reported risk estimates. (see Appendix Figure 2)
+
+\subsubsection{Sensitivity analysis and missing data
+reliability}\label{sensitivity-analysis-and-missing-data-reliability}
+
+\textbf{Interaction model}
+
+To evaluate the robustness of the results regarding the impact of air
+pollution on COPD risk by sex, an interaction term analysis between AQI
+exposure variable and biological sex was performed. Based on the results
+in Table 3, the interaction term resulted in HR of 0.9995 with p value
+of 0.944640 that signified the interaction term is not statistically
+significant. This result suggests that the association between air
+pollution exposure and the hazard of receiving a COPD diagnosis does not
+differ significantly between males and females in the study population.
+
+\paragraph{\texorpdfstring{\emph{Table 3 - Interaction term AQI exposure
+and Sex
+model}}{Table 3 - Interaction term AQI exposure and Sex model}}\label{table-3---interaction-term-aqi-exposure-and-sex-model}
+
+\begin{verbatim}
+## # A tibble: 12 x 7
+##    term                 estimate std.error statistic  p.value conf.low conf.high
+##    <chr>                   <dbl>     <dbl>     <dbl>    <dbl>    <dbl>     <dbl>
+##  1 aqi_exposure            1.03    0.00575    5.03   4.93e- 7    1.02      1.04 
+##  2 age                     1.06    0.00833    7.23   4.99e-13    1.04      1.08 
+##  3 sexMale                 1.12    0.440      0.249  8.03e- 1    0.471     2.64 
+##  4 asthma                  3.48    0.166      7.51   6.04e-14    2.51      4.82 
+##  5 smoking_statusFormer    0.904   0.254     -0.397  6.91e- 1    0.550     1.49 
+##  6 smoking_statusNever     0.792   0.227     -1.03   3.03e- 1    0.508     1.23 
+##  7 bmi                     1.06    0.0153     3.78   1.57e- 4    1.03      1.09 
+##  8 ses_statusLow           0.694   0.210     -1.74   8.17e- 2    0.460     1.05 
+##  9 ses_statusMedium        0.632   0.192     -2.40   1.64e- 2    0.434     0.919
+## 10 diabetes                1.20    0.196      0.924  3.56e- 1    0.816     1.76 
+## 11 hypertension            0.803   0.158     -1.39   1.65e- 1    0.590     1.09 
+## 12 aqi_exposure:sexMale    0.999   0.00775   -0.0694 9.45e- 1    0.984     1.01
+\end{verbatim}
+
+\textbf{Numerical, quartile and EPA AQI exposure predictor}
+
+The sensitivity of the findings was further explored by modeling the AQI
+exposure in three different definitions: Continous numerical scale, data
+derived quartiles, and EPA recommended categories. Based on Figure 1, in
+the continuous model, every one unit increase in AQI was associated with
+2.8\% increase in risk of receiving COPD diagnosis. The quartile
+analysis improved the interpretation of the results by revealing that
+the individuals in highest AQI exposure group (Q4) faced 5.2 times the
+hazard compared to those in the lowest group (Q1). Similarly, using EPA
+categories, ``Moderate'' air pollution exposure increased the risk by
+2.78 times compared to Good air quality, while ``Unhealthy for Sensitive
+Groups'' showed a much high hazard ratio of 6.3. However, the category
+``Unhealthy for Sensitive Groups'' is noted to not be statistically
+significant with p value of 0.07.
+
+\paragraph{\texorpdfstring{\emph{Figure 1 - Comparison between
+Numerical, quartile and EPA AQI exposure predictor in
+models}}{Figure 1 - Comparison between Numerical, quartile and EPA AQI exposure predictor in models}}\label{figure-1---comparison-between-numerical-quartile-and-epa-aqi-exposure-predictor-in-models}
+
+\begin{verbatim}
+## # A tibble: 6 x 8
+##   Model_Type term         HR Lower_95 Upper_95 Model_Label term_clean label_text
+##   <chr>      <chr>     <dbl>    <dbl>    <dbl> <chr>       <chr>      <chr>     
+## 1 1          aqi_cate~  2.79    2.02      3.85 EPA Catego~ Moderate   2.79 (2.0~
+## 2 1          aqi_cate~  6.32    0.856    46.7  EPA Catego~ Unhealthy~ 6.32 (0.8~
+## 3 2          aqi_quar~  1.93    1.04      3.59 AQI Quarti~ Q2         1.93 (1.0~
+## 4 2          aqi_quar~  3.57    2.03      6.26 AQI Quarti~ Q3         3.57 (2.0~
+## 5 2          aqi_quar~  5.36    3.11      9.23 AQI Quarti~ Q4 (Highe~ 5.36 (3.1~
+## 6 3          aqi_expo~  1.03    1.02      1.04 Continuous~ aqi_expos~ 1.03 (1.0~
+\end{verbatim}
+
+\pandocbounded{\includegraphics[keepaspectratio]{Final-report_files/figure-latex/model analysis Comparaison-1.pdf}}
+
+\textbf{CCA vs MICE}
+
+Finally, reliability of the analysis is assessed regarding the missing
+data treatment by comapring the Complete Case Analysis (CCA) with
+Multivariate Imputation by Chained Equation (MICE). Based on Figure 2,
+the results from both approaches are similar with both models indicating
+that a one unit increase in AQI exposure increases the risk of receiving
+COPD diagnosis by 3-4\%. Since the difference between the CCA and MICE
+is minimal, the model results are reliable and the missing data in
+weighted AQI exposure is likely Missing completely at random or missing
+at random.
+
+\paragraph{\texorpdfstring{\emph{Figure 2 - Comparison between MICE and
+CCA methods of treating missing
+data}}{Figure 2 - Comparison between MICE and CCA methods of treating missing data}}\label{figure-2---comparison-between-mice-and-cca-methods-of-treating-missing-data}
+
+\pandocbounded{\includegraphics[keepaspectratio]{Final-report_files/figure-latex/model analysis CCA vs MICE vs primary-1.pdf}}
+
+\section{Discussion}\label{discussion}
+
+\section{References}\label{references}
+
+\section{Appendix}\label{appendix}
+
+\pandocbounded{\includegraphics[keepaspectratio]{Final-report_files/figure-latex/model assumption-1.pdf}}
+\pandocbounded{\includegraphics[keepaspectratio]{Final-report_files/figure-latex/model assumption-2.pdf}}
+
+\end{document}

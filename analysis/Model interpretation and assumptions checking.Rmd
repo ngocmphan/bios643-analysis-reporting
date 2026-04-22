@@ -14,6 +14,7 @@ cohort_data <- import(here("data", "cohort-data-primary-analysis_final.csv")) %>
     asthma = factor(asthma),
     diabetes = factor(diabetes),
     hypertension = factor(hypertension), 
+    smoking_status = relevel(factor(smoking_status), ref = "Never"),
     age = ifelse(age == 345, NA, age)
   )
 ```

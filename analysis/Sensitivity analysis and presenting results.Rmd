@@ -1,0 +1,356 @@
+---
+title: "Sensitivity analysis and presenting results"
+output:
+  pdf_document: default
+  html_document: default
+date: "2026-04-12"
+---
+
+```{r setup, include=FALSE}
+pacman::p_load(rio, here, tidyverse, tableone, survival, survminer, broom, mice)
+knitr::opts_chunk$set(echo = TRUE)
+
+cohort_data <- import(here("data", "cohort-data-primary-analysis_final.csv"))
+cohort_data <- cohort_data %>%
+  mutate(
+    # Create Data-derived Quartiles
+    aqi_quartiles = ntile(aqi_exposure, 4),
+    aqi_quartiles = factor(aqi_quartiles, labels = c("Q1 (Lowest)", "Q2", "Q3", "Q4 (Highest)")), 
+        age = ifelse(age == 345, NA, age))
+
+
+cohort_cleaned <- cohort_data %>%
+  mutate(
+    # Convert 0/1 to factor with labels
+    across(c(asthma, diabetes, hypertension, copd_diagnosis), 
+           ~ factor(.x, levels = c(0, 1), labels = c("No", "Yes"))),
+    
+    # Ensure categorical variables are factors for proper display
+    smoking_status = factor(smoking_status),
+    bmi_category = factor(bmi_category),
+    ses_status = factor(ses_status, levels = c("Low", "Medium", "High"))
+    
+  ) %>%
+  rename(
+    `BMI category` = bmi_category,
+    `Smoking status` = smoking_status,
+    `Socioeconomic status` = ses_status,
+    `Asthma` = asthma,
+    `Diabetes` = diabetes,
+    `Hypertension` = hypertension,
+    `AQI Exposure` = aqi_exposure,
+    `Age category` = age_category,
+    `Sex` = sex
+  )
+
+cohort_complete_case <- cohort_data %>%
+  filter(aqi_exposure > 0) %>%
+  mutate(
+    # Create Data-derived Quartiles
+    aqi_quartiles = ntile(aqi_exposure, 4),
+    aqi_quartiles = factor(aqi_quartiles, labels = c("Q1 (Lowest)", "Q2", "Q3", "Q4 (Highest)")))
+
+aqi_annual <- import(here("data", "aqi-annual-data.csv"))
+residential_data <- import(here("data", "residential-expanded.csv"))
+```
+
+# Study population
+
+Below is the table 1 - Summarized statistics of the study population
+
+```{r Table 1, echo=FALSE}
+my_vars <- c("Age category", "Sex", "BMI category", "Smoking status", 
+             "Asthma", "Diabetes", "Hypertension", "AQI Exposure", "Socioeconomic status")
+
+cat_vars <- c("Age category", "Sex", "Smoking status", 
+              "Asthma", "Diabetes", "Hypertension", "BMI category", "Socioeconomic status")
+
+# 3. Create the table
+tab1 <- CreateTableOne(vars = my_vars, 
+                       strata = "copd_diagnosis", 
+                       data = cohort_cleaned, 
+                       factorVars = cat_vars)
+
+print(tab1, showAllLevels = TRUE, quote = FALSE, noSpaces = TRUE, test = FALSE, printToggle = FALSE) %>%
+  knitr::kable()
+```
+
+Table 1 describes the total population including the proportions of age category, Sex, BMI category, Smoking status, Asthma diagnosis, Diabetes diagnosis, Hypertension diagnosis, Socioeconomic status, and AQI exposure in numerical scale by COPD diagnosis. Categorical variables are described in number of observations and percentage of each category and by COPD diagnosis. For numerical predictor - AQI Exposure, the mean and standard deviation for the predictor were noted. 
+
+# Primary analysis
+The primary analysis includes the analysis of Cox Proportional Hazard model to evluate the 10-year risk of COPD diagnosis. The AQI exposure predictor is further analyzed and transformed with three types of variations: AQI exposure in numerical scale, AQI exposure quartiles, and aqi_exposure categories based on EPA recommendation. Regarding AQI quartiles, the AQI exposure predictor was transformed using ntile() function to divide the predictor values into 4 groups based on its values. 
+
+The following results show the hazard ratios (HR) and 95\% confidence interval for each AQI exposure predictor definition: 
+
+## Continuous AQI
+
+```{r model analysis Continuous, echo=FALSE}
+# Fit the Cox Proportional Hazards Model
+cox_model <- coxph(
+  Surv(time_to_copd, copd_diagnosis) ~ aqi_exposure + age + sex + asthma + smoking_status + bmi + ses_status + diabetes + hypertension,
+  data = cohort_data
+)
+
+# Model Summary
+summary(cox_model)
+```
+This model treats AQI as a sliding scale, measuring the risk associated with every single unit increase in pollution. The results show a Hazard Ratio of 1.028, meaning that for every one-point increase in the AQI, the risk of a COPD diagnosis rises by 2.8\%. This relationship is highly significant ($p < 0.001$), providing the most precise statistical evidence that as pollution levels climb, the risk of respiratory disease increases steadily across the entire population.
+
+## Data derived quartiles
+
+```{r model analysis Data derived quartiles, echo=FALSE}
+# Fit the Cox Proportional Hazards Model
+cox_model <- coxph(
+  Surv(time_to_copd, copd_diagnosis) ~ aqi_quartiles + age + sex + asthma + smoking_status + bmi + ses_status + diabetes + hypertension,
+  data = cohort_data
+)
+
+# Model Summary
+summary(cox_model)
+```
+This approach divides the population into four equal groups based on their exposure levels. While the jump from the lowest group (Q1) to the second (Q2) was not quite significant, the risk skyrockets in the upper half of the data: those in Q3 face 3.6 times the risk, and those in the highest group (Q4) face 5.2 times the hazard of the lowest group. This indicates that there is a dramatic "danger zone" once exposure passes a certain threshold, with high-pollution areas carrying a massive risk of COPD diagnosis. 
+
+## EPA Categories
+
+```{r model analysis EPA categories, echo=FALSE}
+# Fit the Cox Proportional Hazards Model
+cox_model <- coxph(
+  Surv(time_to_copd, copd_diagnosis) ~ aqi_category + age + sex + asthma + smoking_status + bmi + ses_status + diabetes + hypertension,
+  data = cohort_data
+)
+
+# Model Summary
+summary(cox_model)
+
+```
+By grouping participants into official regulatory categories like "Good," "Moderate," and "Unhealthy," this analysis translates the findings into policy-relevant terms. The data shows that even "Moderate" air quality—often considered acceptable by the public—is associated with 2.9 times the risk of COPD compared to "Good" air. Although the "Unhealthy for Sensitive Groups" category showed an even higher hazard ($HR = 4.70$), the predictor is not statistically significant with p-value > 0.05.
+
+## Results summary - Comparaison between models
+
+```{r model analysis Comparaison, echo=FALSE}
+# Fit the Cox Proportional Hazards Model - AQI category
+cox_model_category <- coxph(
+  Surv(time_to_copd, copd_diagnosis) ~ aqi_category + age + sex + asthma + smoking_status + bmi + ses_status + diabetes + hypertension,
+  data = cohort_data
+)
+
+# Fit the Cox Proportional Hazards Model - Quartiles
+cox_model_quartile <- coxph(
+  Surv(time_to_copd, copd_diagnosis) ~ aqi_quartiles + age + sex + asthma + smoking_status + bmi + ses_status + diabetes + hypertension,
+  data = cohort_data
+)
+
+# Fit the Cox Proportional Hazards Model - Base
+cox_model <- coxph(
+  Surv(time_to_copd, copd_diagnosis) ~ aqi_exposure + age + sex + asthma + smoking_status + bmi + ses_status + diabetes + hypertension,
+  data = cohort_data
+)
+
+models <- list(cox_model_category, cox_model_quartile, cox_model)
+
+comparaison_tb <- map_df(models, ~tidy(.x, exponentiate = TRUE, conf.int = TRUE), .id = "Model_Type") %>%
+  filter(str_detect(term, "aqi") | str_detect(term, "EPA")) %>%
+  # Select only the columns you requested
+  select(Model_Type, term, 
+         HR = estimate, 
+         Lower_95 = conf.low, 
+         Upper_95 = conf.high) %>%
+  mutate(
+    # Rename Model Types to be descriptive
+    Model_Label = case_when(
+      Model_Type == "1" ~ "EPA Categories",
+      Model_Type == "2" ~ "AQI Quartiles",
+      Model_Type == "3" ~ "Continuous AQI"
+    ),
+    # Clean up the term names (remove prefix)
+    term_clean = gsub("aqi_category|aqi_quartiles", "", term), 
+    label_text = sprintf("%.2f (%.2f - %.2f)", HR, Lower_95, Upper_95)
+  )
+
+print(comparaison_tb)
+
+ggplot(comparaison_tb, aes(x = HR, y = term_clean, color = Model_Label)) +
+  geom_vline(xintercept =1, color = "black", linetype = "dashed") +
+  geom_errorbar(aes(xmin = Lower_95, xmax = Upper_95)) + 
+  geom_point(size = 3) + 
+  labs(
+    title = "Forest Plot of AQI Exposure Effects",
+    subtitle = "Hazard Ratios (HR) with 95% Confidence Intervals",
+    x = "Hazard Ratio (Log Scale)",
+    y = ""
+  ) +
+  geom_text(aes(label = label_text), hjust = -0.1,
+            vjust = -0.8)
+
+```
+
+Results across three AQI definitions confirm a clear link to COPD risk, with the exception of the EPA ‘Unhealthy for Sensitive Groups’ category. That specific category lacked enough data to be conclusive, resulting in a very wide confidence interval that included 1.
+
+The quartile approach proved to be the most useful model. It offers a practical and stable way to see how risk climbs as air quality worsens across the population, even though the risk for the second quartile specifically was not statistically significant. In contrast, the numerical model for AQI fails to show the real-world impact as clearly as the quartile comparison, which reveals that those in the highest-exposure group face five times the risk of a COPD diagnosis.
+
+# Sensitivity analyses for missing data
+
+## Multivariate Imputation - MICE
+
+```{r model analysis MICE, echo=FALSE}
+# Creating a aqi_annual dataset that includes all years within consideration: 1995-2009
+all_counties <- aqi_annual %>% distinct(state, county)
+all_years <- data.frame(year = 1995:2009)
+full_grid <- all_counties %>% 
+  crossing(all_years) %>%
+  left_join(aqi_annual, by = c("state", "county", "year"))
+
+# Impute the median_aqi based on state, county, and year
+imputation_data <- full_grid %>% select(state, county, year, median_aqi)
+imputed_aqi_medians <- mice(imputation_data, m = 20, method = 'pmm', seed = 123, printFlag = FALSE)
+
+# Create a list to store the 20 processed dataframes
+imputed_cohort_list <- map(1:20, ~ {
+  
+  # Extract the i-th imputed version of the AQI data
+  aqi_i <- complete(imputed_aqi_medians, .x)
+  
+  # Calculate weighted average for this specific version
+  exposure_i <- residential_data %>%
+    # Join the residential history with the CURRENT imputed AQI values
+    left_join(aqi_i, by = c("state", "county", "year")) %>%
+    group_by(id) %>%
+    summarise(
+      # Weighted Average = Sum(AQI * days) / Total Days
+      # We use the imputed median_aqi which is now complete for every row
+      weighted_aqi = sum(median_aqi * days_in_year) / sum(days_in_year),
+      .groups = "drop"
+    )
+  
+  # Merge this version's exposure back with your primary cohort outcomes
+  cohort_data %>%
+    left_join(exposure_i, by = "id")
+})
+
+# Conduct the Cox proportional models over the 20 imputed aqi values datasets
+models_list <- lapply(imputed_cohort_list, function(df) {
+  coxph(Surv(time_to_copd, copd_diagnosis) ~ weighted_aqi + age + sex + asthma + smoking_status + bmi + ses_status + diabetes + hypertension, data = df)
+})
+
+
+# Application of Rubin's Rules to evaluate the Hazard ratios among the 20 datasets
+pooled_results <- pool(as.mira(models_list))
+summary(pooled_results, exponentiate = TRUE, conf.int = TRUE)
+
+```
+## Complete Case analysis
+
+```{r model analysis Complete case analysis, echo=FALSE}
+# Calculate the weighted aqi_exposure
+cca_exposure <- residential_data %>%
+  left_join(aqi_annual, by = c("state", "county", "year")) %>%
+  group_by(id) %>%
+  summarise(
+    weighted_aqi = sum(median_aqi * days_in_year) / sum(days_in_year)
+  )
+cca_test <- cohort_data %>%
+  left_join(cca_exposure, by = "id")
+
+# Merge with cohort_data
+cca_data <- cohort_data %>%
+  left_join(cca_exposure, by = "id")
+
+# Filter out missing values for weighted_aqi values
+cca_data <- cca_data %>%
+  drop_na(weighted_aqi)
+
+# Fit the Cox Proportional Hazards Model
+cox_model <- coxph(
+  Surv(time_to_copd, copd_diagnosis) ~weighted_aqi + age + sex + asthma + smoking_status + bmi + ses_status + diabetes + hypertension,
+  data = cca_data
+)
+
+# Model Summary
+summary(cox_model)
+
+```
+
+
+## Comparaison
+```{r model analysis CCA vs MICE vs primary, echo=FALSE}
+# Primary analysis
+cox_model_primary <- coxph(
+  Surv(time_to_copd, copd_diagnosis) ~ aqi_exposure + age + sex + asthma + smoking_status + bmi + ses_status + diabetes + hypertension,
+  data = cohort_data
+)
+
+# Fit the Cox Proportional Hazards Model
+cox_model <- coxph(
+  Surv(time_to_copd, copd_diagnosis) ~weighted_aqi + age + sex + asthma + smoking_status + bmi + ses_status + diabetes + hypertension,
+  data = cca_data
+)
+
+# Application of Rubin's Rules to evaluate the Hazard ratios among the 20 datasets
+pooled_results <- pool(as.mira(models_list))
+
+# Extract CCA results
+cca_summary <- tidy(cox_model, exponentiate = TRUE, conf.int = TRUE) %>%
+  filter(term == "weighted_aqi") %>%
+  select(HR = estimate, Lower_95 = conf.low, Upper_95 = conf.high) %>%
+  mutate(Model_Label = "Complete Case Analysis (CCA)")
+
+# Extract MICE (Pooled) results
+mice_summary <- summary(pooled_results, exponentiate = TRUE, conf.int = TRUE) %>%
+  filter(term == "weighted_aqi") %>%
+  select(HR = estimate, Lower_95 = `2.5 %`, Upper_95 = `97.5 %`) %>%
+  mutate(Model_Label = "Multiple Imputation (MICE)")
+
+# Extract primary results
+primary_summary <- tidy(cox_model_primary, exponentiate = TRUE, conf.int = TRUE) %>%
+  filter(term == "aqi_exposure") %>%
+  select(HR = estimate, Lower_95 = conf.low, Upper_95 = conf.high) %>%
+  mutate(Model_Label = "Primary analysis model")
+
+# Combine them into one table for the plot
+comparaison_tb <- bind_rows(cca_summary, mice_summary, primary_summary) %>%
+  mutate(
+    term_clean = "Weighted AQI Exposure",
+    label_text = paste0(
+      format(round(HR, 3), nsmall = 3), 
+      " (", round(Lower_95, 3), ", ", round(Upper_95, 3), ")"
+    )
+  )
+
+ggplot(comparaison_tb, aes(x = HR, y = term_clean, color = Model_Label)) +
+  geom_vline(xintercept = 1, color = "black", linetype = "dashed", size = 0.8) +
+  geom_errorbar(aes(xmin = Lower_95, xmax = Upper_95), 
+                width = 0.2, 
+                position = position_dodge(width = 0.5)) + 
+  geom_point(size = 4, position = position_dodge(width = 0.5)) + 
+  geom_text(aes(label = label_text), 
+            position = position_dodge(width = 0.5),
+            hjust = 1, 
+            vjust = -1.2,
+            show.legend = FALSE) +
+  theme(
+    legend.position = "bottom",
+    axis.text.y = element_text(face = "bold", size = 12),
+    plot.title = element_text(face = "bold", size = 14)
+  ) +
+  labs(
+    title = "Sensitivity Analysis: CCA vs. Multiple Imputation",
+    subtitle = "Hazard Ratios (HR) for COPD Risk per 1-unit increase in AQI",
+    x = "Hazard Ratio (95% CI)",
+    y = "",
+    color = "Analysis Method"
+  )
+
+
+
+```
+
+Based on the results above from the Imputed median AQI values and Complete case analysis, the weighted_AQI predictor shows consistent effect on the risk of COPD diagnosis, for an increase in one unit of AQI exposure, there is an increase in risk of 3-4\% of COPD diagnosis. Since the difference between the risk between complete case analysis and multivariate imputation is minimal, this shows that the missing data in weighted AQI is likely missing completely at random (MCAR) or missing at random (MAR). 
+
+
+# Summary of results
+
+Table 1 is vital for summarizing the study population and the key factors used in our analysis. While the raw results are presented in detailed tables, these can be difficult to interpret quickly due to the large amount of statistical data. To make the findings more accessible, forest plots were used to visualize the risk. These plots clearly show the Hazard Ratio and the 95% confidence interval for air pollution, making it easier to see the impact and compare different models.
+
+The sensitivity analysis confirms that the findings are highly reliable. Whether we used only the complete data (CCA) or filled in missing gaps with statistical estimates (MICE), the results remained nearly identical. All models consistently show that for every one-unit increase in average air pollution exposure over ten years, the risk of a COPD diagnosis rises by 3–4\%. This consistency proves that the link between pollution and respiratory health is a real finding and was not influenced by how we handled missing information.
+
+

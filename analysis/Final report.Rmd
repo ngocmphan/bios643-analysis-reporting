@@ -1,0 +1,472 @@
+---
+title: "Impact of cumulative Air pollution on Chronic Obstructive Pulmonary Disease: A 10-year Longitudinal EHR based study"
+output:
+  word_document: default
+  html_document: default
+  pdf_document: default
+date: "2026-04-19"
+---
+
+```{r setup, include=FALSE}
+pacman::p_load(rio, here, tidyverse, tableone, survival, survminer, broom, mice, patchwork)
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+cohort_data <- import(here("data", "cohort-data-primary-analysis_final.csv"))
+cohort_data <- cohort_data %>%
+  mutate(
+    # Create Data-derived Quartiles
+    aqi_quartiles = ntile(aqi_exposure, 4),
+    aqi_quartiles = factor(aqi_quartiles, labels = c("Q1 (Lowest)", "Q2", "Q3", "Q4 (Highest)")), 
+    age = ifelse(age == 345, NA, age))
+
+
+cohort_cleaned <- cohort_data %>%
+  mutate(
+    # Convert 0/1 to factor with labels
+    across(c(asthma, diabetes, hypertension, copd_diagnosis), 
+           ~ factor(.x, levels = c(0, 1), labels = c("No", "Yes"))),
+    
+    # Ensure categorical variables are factors for proper display
+    smoking_status = factor(smoking_status),
+    bmi_category = factor(bmi_category),
+    ses_status = factor(ses_status, levels = c("Low", "Medium", "High")) # Optional: enforce order
+  ) %>%
+  rename(
+    `BMI category` = bmi_category,
+    `Smoking status` = smoking_status,
+    `Socioeconomic status` = ses_status,
+    `Asthma` = asthma,
+    `Diabetes` = diabetes,
+    `Hypertension` = hypertension,
+    `AQI Exposure` = aqi_exposure,
+    `Age category` = age_category,
+    `Sex` = sex
+  )
+
+cohort_complete_case <- cohort_data %>%
+  filter(aqi_exposure > 0) %>%
+  mutate(
+    # Create Data-derived Quartiles
+    aqi_quartiles = ntile(aqi_exposure, 4),
+    aqi_quartiles = factor(aqi_quartiles, labels = c("Q1 (Lowest)", "Q2", "Q3", "Q4 (Highest)")))
+
+aqi_annual <- import(here("data", "aqi-annual-data.csv"))
+residential_data <- import(here("data", "residential-expanded.csv"))
+```
+
+
+# Abstract
+
+**Background**: Chronic Obstructive Pulmonary Disease (COPD) is the fourth leading cause of death worldwide, accounting for 3.5 million of deaths annually. While risk factor such as tobacco smoking is well established, the role of long term air pollution exposure is not well studied. 
+
+**Objective**: This study evaluated the association between 10-year weighted Air Quality Index (AQI) exposure and the risk of receiving COPD diagnosis in a multi-center cohort study. 
+
+**Methods**: Electronic Health Records (EHR) from multi-center healthcare system and EPA air quality data were used in this study; the cohort included 1973 participants aged 40 and older with a minimum of 10 years of residential history. AQI exposure was measured with three definitions: Numerical scale, by quartile, and by EPA categories. Sensitivity analyses were conducted to evaluate the robustness of the primary model; these analyses included Sex based interaction term, and comparaison between Complete case analysis (CCA) and Multivariate Imputation by Chained Equation (MICE). 
+
+**Results**: Every one unit increase in weighted AQI exposure was associated with 2.8% increase in risk of receiving COPD diagnosis (HR = 1.028, p<0.001). Individuals with the highest AQI exposure (4th quartile) faced a 5.36 fold increase in risk in comparison to the lowest exposure (1st quartile). Interaction analysis showed the exposure effect on both sex remained similar. Results were consistent between the two models used to handle missing data CCA and MICE. 
+
+**Conclusion**: A long term exposure to moderate level of air pollution significantly increases COPD risks. These findings suggest the necessity of environmental policies or further studies in protective factors to protect the population living in the neighborhood with high risks. 
+
+# Introduction
+
+Chronic Obstructive Pulmonary Disease (COPD) represents a critical global health crisis where it is the fourth leading cause of death and accounting for 5% of all deaths worldwide (World Health Organization, 2024). COPD is traditionally linked to prolonged exposure to noxious particles. From this, tobacco smoking remains the primary driver in high income countries, a significant contributor to the risk of developing COPD or worsen respiratory symptoms is exposure to environmental air pollution (Duan et al., 2020). 
+
+The Air Quality Index (AQI) serves as a standardized metric for monitoring major pollutants such as particulate matter (PM2.5), nitrogen dioxide, and ozone. Long term exposure to these particles had been shown to associate with accelerated lung function decline and heightened incidence of COPD, especially with higher quartiles levels of exposure (Guo et al., 2018). In addition, another large scale studies showed the results of association between ambient air pollution and increased prevalence of respiratory symptoms, regardless of baseline health characteristics (Schikowski et al., 2014). 
+
+Despite these established links, a significant gap remains in the literature: most existing studies rely on single-point residential data—essentially a one-to-two-year "snapshot"—rather than accounting for long-term cumulative exposure or residential mobility over time. Furthermore, there is a pressing need to evaluate the impact of overall air pollutant mixtures rather than focusing exclusively on isolated particles like $PM_{2.5}$
+
+This study addressed the gaps by using 10 years of residential history from Electronic Heatlh Records (EHR) and Environmental Protection Agency (EPA) data to calculate the weighted long-term AQI exposure and its association to the risk of receiving COPD diagnosis. By evaluating the association between this decade-long exposure and the risk of receiving a COPD diagnosis, we aim to provide a more robust assessment of environmental risk. Additionally, we explore whether biological sex modifies this risk and conduct sensitivity analyses to ensure the stability of findings across different missing data treatments
+
+# Methods
+### Study design and participants
+
+The study follows a cohort study design with data from Electronic health record (EHR) from a multi-center healthcare system in the United States including the patient information, comorbidities diagnostic codes, and residential addresses associated and period of habitation. In addition, air pollution data from Environmental Protection Agency (EPA) was used in the study with Air quality index (AQI) values for associated county and availability of AQI by year in the study. 
+
+Participants were included in the cohort if the entry date of the participant during the index period between January 1st, 2005 and December 31st, 2010, participants' age of 40 years or older, and availability of residential data of 10 years minimum prior to the index date. 
+
+### Data handling
+
+The raw dataset underwent a cleaning and transformation process to ensure clinical interpretability, data validity, and adherence to the defined inclusion of the criteria. The initial preprocessed cleaning ensure the standardization of predictors names and data format consistency; the standardization converted all predictors names to lowercase convention, and the temporal variables normalized to date formatting of MM/DD/YYYY. This phase included the reconciliation of categorical inconsistencies, specifically mixed case entries values in categorical variables detected in Smoking status variable. In addition, remapping of binary integers to descriptive strings to facilitate the interpretation of the analytical results. 
+
+Feature engineering was performed for Age variable to transform continuous variable to appropriate and interpretable bins: <40, 40–49, 50–59, 60–69, and 70+ years. Body Mass Index (BMI) was categorized into four ordinal categories based on World Health Organization (WHO) definitions. 
+
+In order to quantify and assess the environmental risk and exposure, AQI exposure metric was defined as the weighted air pollution exposure based on residential address records and EPA monitoring data accounted for 10-year exposure indexed in the study. 
+
+Data quality control measures were performed to identify outliers, data redundancies and missing data. Duplicated observations of participant ID were removed to ensure unique record for each individual within the cohort. An outlier in the age value of 345 was identified and recoded as NA to prevent bias in the models. In order to address the missing data in the AQI exposure predictor, two approaches were tested: Complete Case Analysis (CCA) and Multivariate Imputation by Chained Equation (MICE). The CCA approach was performed to remove the data across all variables where AQI exposure is missing, where MICE approach was employed to estimate missing values with statistical estimate. Specifically, Predictive Mean Matching (PMM) method was employed in MICE approach in which the imputed values are sampled from observed data points in the dataset. To account for uncertainty inherent in the imputation process, we generated 20 independent datasets that include different estimates for the missing values. For each imputed dataset, a time weighted average AQI of median AQI value was calculated by integrating the residential history of each participant. 
+
+
+## Statistical analysis
+
+The primary association between air pollution exposure and the ten-year risk of receiving COPD diagnosis was evaluated using Cox Proportional Hazard models. To ensure the robust of the assessment, the weighted AQI expsosure predictor was analyzed through three distinct variations: as a continous numerical scale, data-derived quartiles (Q1-Q4), and according to regulatory EPA categories (e.g. "Good", "Moderate", "Unhealthy for Sensitive Groups"). All models were adjusted for potential confounding factors including age, sex, asthma diagnosis, smoking status. 
+
+
+Statistical evidence was assessed using Hazard Ratios (HR) with corresponding 95% confidence intervals (CI), and results visualizaed with forest plots to compare different exposure variations. Additional sensitivity analysis was conducted by comparing results from CCA model against those from MICE imputed model. The resulting estimate from the MICE imputed model were aggregated using Rubin's Rules; the pooling procedure reported the point estimates and 95% CI reflecting the variance of within imputation and between imputation. This is used to confirm the stability of the observed risk due to the missing AQI values of EPA dataset. All statistical tests were two sided and a p-value of < 0.05 was considered statistically significant. 
+
+
+# Results
+
+### Cohort characteristics
+
+Following the application of the inclusion criteria, the final analytical cohort consisted of 1,973 participants, among whom 176 COPD events were recorded (8.9% incidence). The baseline demographic and clinical characteristics of the study population, stratified by COPD diagnosis, are summarized in Table 1.
+
+The cohort was characterized by a balanced distribution of biological sex, with males representing 50.1% of the non-COPD group and 52.3% of the COPD group. Analysis of age distribution revealed that the highest proportions of COPD diagnoses occurred in the 60–69 (42.0%) and 70–79 (27.3%) age categories. Clinically, a substantial disparity was observed in asthma prevalence: 30.1% of participants in the COPD cohort had a history of asthma, compared to only 8.8% in the non-COPD cohort.
+
+Behavioral factors, specifically smoking status, were relatively comparable across both groups; 60.2% of COPD cases and 63.7% of non-cases reported having "never" smoked. However, regarding environmental exposure, the mean weighted AQI was markedly higher in the COPD cohort (53.60; SD: 18.69) than in the non-COPD cohort (40.67; SD: 22.55). These descriptive findings suggest that while traditional risk factors such as sex and smoking status were balanced, age, asthma history, and environmental pollution levels were notably differentiated by COPD diagnosis status. 
+
+#### *Table 1 - Cohort characteristics*
+```{r Table 1, echo=FALSE}
+my_vars <- c("Age category", "Sex", "BMI category", "Smoking status", 
+             "Asthma", "Diabetes", "Hypertension", "AQI Exposure", "Socioeconomic status")
+
+cat_vars <- c("Age category", "Sex", "Smoking status", 
+              "Asthma", "Diabetes", "Hypertension", "BMI category", "Socioeconomic status")
+
+# 3. Create the table
+tab1 <- CreateTableOne(vars = my_vars, 
+                       strata = "copd_diagnosis", 
+                       data = cohort_cleaned, 
+                       factorVars = cat_vars)
+
+print(tab1, showAllLevels = TRUE, quote = FALSE, noSpaces = TRUE, test = FALSE, printToggle = FALSE) %>%
+  knitr::kable()
+```
+
+
+### Primary multivariate analysis: AQI and COPD risk
+The association between long-term air pollution exposure (based on AQI Exposure variable) and the COPD risk was evaluated using Cox Proportional hazards model. After adjusting for demographics variables (Age, Sex), Clinical related factors(Asthma diagnosis, BMI, Diabetes status, Hypertension status), Smoking status and socioeconomic status variables, the weighted AQI exposure remained a significant predictor for COPD diagnosis with HR: 1.03; 95% CI: 1.02–1.04; p < 0.05. This indicates that for every one unit increase in the AQI exposure, there is a 3% increase in the risk of COPD diagnosis. 
+
+Based on Table 2.1, the demographic variable such as Age, and clinical related factors such as Asthma, and BMI showed strong associations regarding the risk of receiving COPD diagnosis. Asthma was a critical predictor where a three-fold increase in risk of COPD diagnosis for the positive diagnosis of Asthma. Regarding age predictor, an increase in one year of age was associated with 6.2% increase in risk of receiving COPD diagnosis, similarly for BMI predictor with HR: 1.06; p < 0.05. We noted that Smoking status and biological sex predictors were not statistically significant in the results. 
+
+We noted in table 2.2, we further explored the age categories and BMI categories for the detailed impact of each group. The results showed a statistically significant relationship between age and COPD risk where individuals aged 80+ face a 17.6-fold higher risk (HR=17.64; 95% CI: 5.19–59.95) compared to the reference group (ages 40–49). Regarding BMI, both Obesity (HR=1.80; 95%CI: 1.21–2.68) and Overweight (HR=1.46; 95%CI: 1.01–2.11) categories are significant predictors of increased hazard, while Underweight status did not reach statistical significance. These findings suggest that while air pollution is a consistent risk factor, the physiological impact of aging and elevated BMI represent major additive contributors to the overall hazard of a COPD diagnosis.
+
+#### *Table 2.1 - Primary model results*
+```{r model analysis, echo=FALSE}
+# Fit the Cox Proportional Hazards Model
+cox_model <- coxph(
+  Surv(time_to_copd, copd_diagnosis) ~ aqi_exposure + age + sex + asthma + smoking_status + bmi + ses_status + diabetes + hypertension,
+  data = cohort_data
+)
+# Model Summary
+model_results <- tidy(cox_model, exponentiate = TRUE, conf.int = TRUE)
+model_results
+
+```
+
+#### *Table 2.2 - Primary model results with age categories and BMI categories*
+```{r model analysis - categories, echo=FALSE}
+cox_model <- coxph(
+  Surv(time_to_copd, copd_diagnosis) ~ aqi_exposure + age_category + sex + asthma + 
+    smoking_status + bmi_category + ses_status + diabetes + hypertension,
+  data = cohort_data
+)
+
+# Model Summary
+model_results <- tidy(cox_model, exponentiate = TRUE, conf.int = TRUE)
+model_results
+
+```
+### Model diagnostics and assumptions
+
+The validity of Cox Proportional Hazards model was confirmed through an assessment of its underlying assumptions. To evaluate the linearity of continous covariates, the relationship between the log-hazard of COPD and continuous predictors including weighted AQI exposure, BMI, and age was examined. Visual inspection of these functional forms confirmed a linear relationship for all variables, indicating that the linearity assumption was satisfied without the need for non-linear transformations. (see Appendix Figure 1)
+
+Furthermore, the proportional hazards assumption was evaluated using both global and individual Schoenfeld residual diagnostics. he global Schoenfeld test yielded a non-significant result (p = 0.67), suggesting that the hazard ratios remained constant over the follow-up period. Graphical analysis of the Schoenfeld residuals across all predictors demonstrated no discernible trends or time-dependent effects. Collectively, these diagnostics confirm that the fundamental assumptions of the Cox Proportional Hazards model were met, ensuring the reliability of the reported risk estimates. (see Appendix Figure 2)
+
+
+### Sensitivity analysis and missing data reliability
+
+**Interaction model**
+
+To evaluate the robustness of the results regarding the impact of air pollution on COPD risk by sex, an interaction term analysis between AQI exposure variable and biological sex was performed. Based on the results in Table 3, the interaction term resulted in HR of 0.9995 with p value of 0.944640 that signified the interaction term is not statistically significant. This result suggests that the association between air pollution exposure and the hazard of receiving a COPD diagnosis does not differ significantly between males and females in the study population. 
+
+#### *Table 3 - Interaction term AQI exposure and Sex model*
+```{r model analysis - Interaction term, echo=FALSE}
+# Fit the Cox Proportional Hazards Model
+cox_model <- coxph(
+  Surv(time_to_copd, copd_diagnosis) ~ aqi_exposure + age + sex + asthma + smoking_status + bmi + ses_status + diabetes + hypertension + aqi_exposure*sex,
+  data = cohort_data
+)
+
+model_results <- tidy(cox_model, exponentiate = TRUE, conf.int = TRUE)
+model_results
+```
+
+
+**Numerical, quartile and EPA AQI exposure predictor**
+
+The sensitivity of the findings was further explored by modeling the AQI exposure in three different definitions: Continous numerical scale, data derived quartiles, and EPA recommended categories. Based on Figure 1, in the continuous model, every one unit increase in AQI was associated with 2.8% increase in risk of receiving COPD diagnosis. The quartile analysis improved the interpretation of the results by revealing that the individuals in highest AQI exposure group (Q4) faced 5.2 times the hazard compared to those in the lowest group (Q1). Similarly, using EPA categories, "Moderate" air pollution exposure increased the risk by 2.78 times compared to Good air quality, while "Unhealthy for Sensitive Groups" showed a much high hazard ratio of 6.3. However, the category "Unhealthy for Sensitive Groups" is noted to not be statistically significant with p value of 0.07. 
+
+
+#### *Figure 1 - Comparison between Numerical, quartile and EPA AQI exposure predictor in models*
+```{r model analysis Comparaison, echo=FALSE}
+# Fit the Cox Proportional Hazards Model - AQI category
+cox_model_category <- coxph(
+  Surv(time_to_copd, copd_diagnosis) ~ aqi_category + age + sex + asthma + smoking_status + bmi + ses_status + diabetes + hypertension,
+  data = cohort_data
+)
+
+# Fit the Cox Proportional Hazards Model - Quartiles
+cox_model_quartile <- coxph(
+  Surv(time_to_copd, copd_diagnosis) ~ aqi_quartiles + age + sex + asthma + smoking_status + bmi + ses_status + diabetes + hypertension,
+  data = cohort_data
+)
+
+# Fit the Cox Proportional Hazards Model - Base
+cox_model <- coxph(
+  Surv(time_to_copd, copd_diagnosis) ~ aqi_exposure + age + sex + asthma + smoking_status + bmi + ses_status + diabetes + hypertension,
+  data = cohort_data
+)
+
+models <- list(cox_model_category, cox_model_quartile, cox_model)
+
+comparaison_tb <- map_df(models, ~tidy(.x, exponentiate = TRUE, conf.int = TRUE), .id = "Model_Type") %>%
+  filter(str_detect(term, "aqi") | str_detect(term, "EPA")) %>%
+  # Select only the columns you requested
+  select(Model_Type, term, 
+         HR = estimate, 
+         Lower_95 = conf.low, 
+         Upper_95 = conf.high) %>%
+  mutate(
+    # Rename Model Types to be descriptive
+    Model_Label = case_when(
+      Model_Type == "1" ~ "EPA Categories",
+      Model_Type == "2" ~ "AQI Quartiles",
+      Model_Type == "3" ~ "Continuous AQI"
+    ),
+    # Clean up the term names (remove prefix)
+    term_clean = gsub("aqi_category|aqi_quartiles", "", term), 
+    label_text = sprintf("%.2f (%.2f - %.2f)", HR, Lower_95, Upper_95)
+  )
+
+print(comparaison_tb)
+
+ggplot(comparaison_tb, aes(x = HR, y = term_clean, color = Model_Label)) +
+  geom_vline(xintercept =1, color = "black", linetype = "dashed") +
+  geom_errorbar(aes(xmin = Lower_95, xmax = Upper_95)) + 
+  geom_point(size = 3) + 
+  labs(
+    title = "Forest Plot of AQI Exposure Effects",
+    subtitle = "Hazard Ratios (HR) with 95% Confidence Intervals",
+    x = "Hazard Ratio (Log Scale)",
+    y = ""
+  ) +
+  geom_text(aes(label = label_text), hjust = -0.1,
+            vjust = -0.8)
+
+```
+
+
+**CCA vs MICE**
+
+Finally, reliability of the analysis is assessed regarding the missing data treatment by comapring the Complete Case Analysis (CCA) with Multivariate Imputation by Chained Equation (MICE). Based on Figure 2, the results from both approaches are similar with both models indicating that a one unit increase in AQI exposure increases the risk of receiving COPD diagnosis by 3-4%. Since the difference between the CCA and MICE is minimal, the model results are reliable and the missing data in weighted AQI exposure is likely Missing completely at random or missing at random. 
+
+#### *Figure 2 - Comparison between MICE and CCA methods of treating missing data*
+```{r model analysis CCA vs MICE vs primary, echo=FALSE}
+# Calculate the weighted aqi_exposure
+cca_exposure <- residential_data %>%
+  left_join(aqi_annual, by = c("state", "county", "year")) %>%
+  group_by(id) %>%
+  summarise(
+    weighted_aqi = sum(median_aqi * days_in_year) / sum(days_in_year)
+  )
+cca_test <- cohort_data %>%
+  left_join(cca_exposure, by = "id")
+
+# Merge with cohort_data
+cca_data <- cohort_data %>%
+  left_join(cca_exposure, by = "id")
+
+# Filter out missing values for weighted_aqi values
+cca_data <- cca_data %>%
+  drop_na(weighted_aqi)
+
+
+# Creating a aqi_annual dataset that includes all years within consideration: 1995-2009
+all_counties <- aqi_annual %>% distinct(state, county)
+all_years <- data.frame(year = 1995:2009)
+full_grid <- all_counties %>% 
+  crossing(all_years) %>%
+  left_join(aqi_annual, by = c("state", "county", "year"))
+
+# Impute the median_aqi based on state, county, and year
+imputation_data <- full_grid %>% select(state, county, year, median_aqi)
+imputed_aqi_medians <- mice(imputation_data, m = 20, method = 'pmm', seed = 123, printFlag = FALSE)
+
+# Create a list to store the 20 processed dataframes
+imputed_cohort_list <- map(1:20, ~ {
+  
+  # Extract the i-th imputed version of the AQI data
+  aqi_i <- complete(imputed_aqi_medians, .x)
+  
+  # Calculate weighted average for this specific version
+  exposure_i <- residential_data %>%
+    # Join the residential history with the CURRENT imputed AQI values
+    left_join(aqi_i, by = c("state", "county", "year")) %>%
+    group_by(id) %>%
+    summarise(
+      # Weighted Average = Sum(AQI * days) / Total Days
+      # We use the imputed median_aqi which is now complete for every row
+      weighted_aqi = sum(median_aqi * days_in_year) / sum(days_in_year),
+      .groups = "drop"
+    )
+  
+  # Merge this version's exposure back with your primary cohort outcomes
+  cohort_data %>%
+    left_join(exposure_i, by = "id")
+})
+
+# Conduct the Cox proportional models over the 20 imputed aqi values datasets
+models_list <- lapply(imputed_cohort_list, function(df) {
+  coxph(Surv(time_to_copd, copd_diagnosis) ~ weighted_aqi + age + sex + asthma + smoking_status + bmi + ses_status + diabetes + hypertension, data = df)
+})
+
+# Primary analysis
+cox_model_primary <- coxph(
+  Surv(time_to_copd, copd_diagnosis) ~ aqi_exposure + age + sex + asthma + smoking_status + bmi + ses_status + diabetes + hypertension,
+  data = cohort_data
+)
+
+# Fit the Cox Proportional Hazards Model
+cox_model <- coxph(
+  Surv(time_to_copd, copd_diagnosis) ~weighted_aqi + age + sex + asthma + smoking_status + bmi + ses_status + diabetes + hypertension,
+  data = cca_data
+)
+
+# Application of Rubin's Rules to evaluate the Hazard ratios among the 20 datasets
+pooled_results <- pool(as.mira(models_list))
+
+# Extract CCA results
+cca_summary <- tidy(cox_model, exponentiate = TRUE, conf.int = TRUE) %>%
+  filter(term == "weighted_aqi") %>%
+  select(HR = estimate, Lower_95 = conf.low, Upper_95 = conf.high) %>%
+  mutate(Model_Label = "Complete Case Analysis (CCA)")
+
+# Extract MICE (Pooled) results
+mice_summary <- summary(pooled_results, exponentiate = TRUE, conf.int = TRUE) %>%
+  filter(term == "weighted_aqi") %>%
+  select(HR = estimate, Lower_95 = `2.5 %`, Upper_95 = `97.5 %`) %>%
+  mutate(Model_Label = "Multiple Imputation (MICE)")
+
+# Combine them into one table for the plot
+comparaison_tb <- bind_rows(cca_summary, mice_summary) %>%
+  mutate(
+    term_clean = "Weighted AQI Exposure",
+    label_text = paste0(
+      format(round(HR, 3), nsmall = 3), 
+      " (", round(Lower_95, 3), ", ", round(Upper_95, 3), ")"
+    )
+  )
+
+ggplot(comparaison_tb, aes(x = HR, y = term_clean, color = Model_Label)) +
+  geom_vline(xintercept = 1, color = "black", linetype = "dashed", size = 0.8) +
+  geom_errorbar(aes(xmin = Lower_95, xmax = Upper_95), 
+                width = 0.2, 
+                position = position_dodge(width = 0.5)) + 
+  geom_point(size = 4, position = position_dodge(width = 0.5)) + 
+  geom_text(aes(label = label_text), 
+            position = position_dodge(width = 0.5),
+            hjust = 1, 
+            vjust = -1.2,
+            show.legend = FALSE) +
+  theme(
+    legend.position = "bottom",
+    axis.text.y = element_text(face = "bold", size = 12),
+    plot.title = element_text(face = "bold", size = 14)
+  ) +
+  labs(
+    title = "Sensitivity Analysis: CCA vs. Multiple Imputation",
+    subtitle = "Hazard Ratios (HR) for COPD Risk per 1-unit increase in AQI",
+    x = "Hazard Ratio (95% CI)",
+    y = "",
+    color = "Analysis Method"
+  )
+
+
+
+```
+
+# Discussion
+
+The findings of this study demonstrate a robust and significant association between long-term air pollution exposure and the hazard of receiving a COPD diagnosis. For every one-unit increase in the Air Quality Index (AQI), there was a consistent 3% to 4% increase in the risk of COPD. These results remained stable across multiple modeling approaches and sensitivity analyses, reinforcing the reliability of the observed link between environmental air quality and chronic respiratory health in this cohort.A key focus of this analysis was the exploration of AQI through different statistical transformations. By evaluating the exposure as a continuous variable, in quartiles, and via EPA categorical thresholds, we identified a clear dose-response relationship. The quartile analysis highlighted a significant escalation in risk at higher exposure levels, with individuals in the fourth quartile (Q4) facing over five times the hazard compared to those in the lowest quartile (Q1). The EPA categorical model further contextualized these risks, showing that "Moderate" air quality significantly increases health risks compared to "Good" air quality. Furthermore, the interaction model between AQI exposure and sex was not statistically significant ($p = 0.9446$), indicating that the adverse effects of air pollution on COPD risk are pervasive across biological sex.
+
+A major strength of this study is its approach to data reliability and longitudinal exposure with 10-year residential history and measured AQI exposure. Additionally, despite the limitation in missing AQI exposure data, the comparison between Complete Case Analysis (CCA) and Multivariate Imputation by Chained Equations (MICE) showed nearly identical results. This consistency provides strong evidence that missing data in the AQI exposure variable did not bias the primary findings and was likely missing at random. However, several limitations must be acknowledged. First, while the study controlled for major confounders such as smoking status, BMI, and socioeconomic status, there remains the possibility of unmeasured confounding from occupational hazards or indoor air quality (such as second-hand smoke or cooking fuels), which were not captured in the EHR data. In addition, confounders that are considered possible protective were not included or identified. Furthermore, the weighted AQI exposure variable is based on the residential history of participant which might not be updated depending on frequency of visit to hospitals and access to hospitals of participants. Second, the reliance on county-level EPA monitoring data serves as a proxy for personal exposure; it does not account for the exact micro-environments where individuals spend most of their time. Additionally, while the hazard ratio for the "Unhealthy for Sensitive Groups" category was high (6.32), it did not reach traditional statistical significance ($p = 0.07$). This is likely due to the smaller number of participants residing in areas that consistently reached these extreme pollution levels, resulting in wider confidence intervals. Finally, the study population was restricted to those with at least 10 years of residential history, which may introduce a selection bias toward more stable populations, potentially limiting the ability to generalize the findings to more transient urban groups.In conclusion, despite these limitations, the stability of the hazard ratios across various sensitivity checks confirms that environmental factors play a critical role in respiratory health. These findings suggest that policy interventions aimed at reducing "moderate" AQI levels could have a measurable impact on reducing the risk of receiving COPD diagnosis for population living in these areas.
+
+
+# References
+Guo, C., et al. (2018). Effect of long-term exposure to fine particulate matter on lung function decline and risk of chronic obstructive pulmonary disease in Taiwan: A longitudinal, cohort study. The Lancet Planetary Health, 2(3), e114–e125.
+
+Duan, R. R., Hao, K., & Yang, T. (2020). Air pollution and chronic obstructive pulmonary disease. Chronic Diseases and Translational Medicine, 6(04), 260–269.
+
+Schikowski, T., et al. (2014). Association of ambient air pollution with the prevalence and incidence of COPD. European Respiratory Journal, 44(3), 614–626.
+
+World Health Organization. (2024). Chronic obstructive pulmonary disease (COPD). Fact sheets. https://www.who.int/news-room/fact-sheets/detail/chronic-obstructive-pulmonary-disease-(copd)
+
+# Appendix
+
+```{r model assumption, echo=FALSE}
+# Fit the Cox Proportional Hazards Model
+cox_model <- coxph(
+  Surv(time_to_copd, copd_diagnosis) ~ aqi_exposure + age + sex + asthma + smoking_status + bmi + ses_status + diabetes + hypertension,
+  data = cohort_data
+)
+
+# Verifying: Proportional hazards assumption
+test_ph <- cox.zph(cox_model)
+
+# Verifying: Linearity of continous variables: age, bmi, aqi_exposure
+linearity_aqi <- ggplot(cohort_data, aes(x = aqi_exposure, y = time_to_copd, shape = factor(copd_diagnosis))) + 
+  geom_point(alpha = 0.5) +
+  geom_smooth(aes(group = 1), method = "loess", se = FALSE, color = "red") + 
+  scale_y_continuous(trans = "log") + # Class requirement: Log of time
+  theme_minimal() +
+  labs(title = "Log(time to copd) and AQI exposure", x = "AQI Exposure", y = "Log(Time)", shape = "Status")
+
+linearity_bmi <- ggplot(cohort_data, aes(x = bmi, y = time_to_copd, shape = factor(copd_diagnosis))) + 
+  geom_point(alpha = 0.5) +
+  geom_smooth(aes(group = 1), method = "loess", se = FALSE, color = "red") + 
+  scale_y_continuous(trans = "log") + # Class requirement: Log of time
+  theme_minimal() +
+  labs(title = "Log(time to copd) and BMI", x = "BMI", y = "Log(Time)", shape = "Status")
+
+linearity_age <- ggplot(cohort_data, aes(x = age, y = time_to_copd, shape = factor(copd_diagnosis))) + 
+  geom_point(alpha = 0.5) +
+  geom_smooth(aes(group = 1), method = "loess", se = FALSE, color = "red") + 
+  scale_y_continuous(trans = "log") + # Class requirement: Log of time
+  theme_minimal() +
+  labs(title = "Log(time to copd) and age", x = "Age", y = "Log(Time)", shape = "Status")
+
+figure_1 <- (linearity_aqi + linearity_bmi) / linearity_age + 
+  plot_layout(heights = c(1, 1)) +
+  plot_annotation(
+    title = "Figure 1: Linearity of Continuous Covariates",
+    subtitle = "Assessing log(time) against AQI, BMI, and Age",
+    tag_levels = 'A'
+  ) & 
+  theme_minimal(base_size = 10) +
+  theme(
+    plot.title = element_text(face = "bold"),
+    axis.title = element_text(size = 9)
+  )
+
+ph_plot_list <- ggcoxzph(test_ph, point.size = 0.3,
+  point.col = "black",
+  font.main = 10,
+  font.x = 8,
+  font.y = 8,
+  font.tickslab = 8)
+
+
+figure_2 <- wrap_plots(ph_plot_list) + 
+  plot_layout(ncol = 3) +
+  plot_annotation(
+    title = "Figure 2: Proportional Hazards Assumption Validation",
+    subtitle = "Scaled Schoenfeld Residuals for all Model Covariates",
+    caption = "Non-significant global test (p = 0.67) indicates assumptions are met.",
+    theme = theme(
+      plot.title = element_text(size = 12, face = "bold", hjust = 0.5),
+      plot.subtitle = element_text(size = 12, hjust = 0.5)
+    )
+  )
+# Display the combined plot
+print(figure_1)
+print(figure_2)
+```
